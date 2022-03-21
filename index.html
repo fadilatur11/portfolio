@@ -332,11 +332,11 @@
                 <div class="col-lg-2 ml-auto"></div>
                 <div class="col-lg-8 ml-auto">
                     <?php
-                        $datetime1 = new DateTime("2017-09-01");
-                        $datetime2 = new DateTime(date("Y-m-d"));
-                        $interval = $datetime1->diff($datetime2);
-                        $years = $interval->format('%y');
-                        ?>
+$datetime1 = new DateTime("2017-09-01");
+$datetime2 = new DateTime(date("Y-m-d"));
+$interval = $datetime1->diff($datetime2);
+$years = $interval->format('%y');
+?>
                     <p class="lead">
                         Hi, my name is Fadil. I have been working as Back-End / Fullstack Developer for about <?php echo $years; ?> years. 
                         I am very enthusiastic learning new things about technology. 

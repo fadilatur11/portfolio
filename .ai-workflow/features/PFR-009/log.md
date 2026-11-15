@@ -1,0 +1,18 @@
+- 2026-11-13T06:57:27+07:00 created (feature, prd-lite, standard) -> REQUEST_CLASSIFIED
+- 2026-11-13T06:58:17+07:00 decision D-001 mode/PFR-009 execution mode: standard (escalate) JEV-20261113-d2d4dbbc#mode
+- 2026-11-13T06:58:17+07:00 decision D-002 risk/PFR-009 overall risk: high (escalate) JEV-20261113-d2d4dbbc#risk
+- 2026-11-13T06:58:17+07:00 decision D-003 criticality/REQ-PFR-009-001: yes (accept) JEV-20261113-d2d4dbbc#crit1
+- 2026-11-13T06:58:17+07:00 decision D-004 criticality/REQ-PFR-009-002: yes (escalate) JEV-20261113-d2d4dbbc#crit2
+- 2026-11-13T06:58:17+07:00 decision D-005 criticality/REQ-PFR-009-003: yes (escalate) JEV-20261113-d2d4dbbc#crit3
+- 2026-11-13T06:58:17+07:00 decision D-006 criticality/REQ-PFR-009-004: yes (escalate) JEV-20261113-d2d4dbbc#crit4
+- 2026-11-13T06:58:17+07:00 decision D-007 analysis/PFR-009 analysis sufficiency: enough (accept) JEV-20261113-d2d4dbbc#analysis
+- 2026-11-13T06:58:20+07:00 REQUEST_CLASSIFIED -> IMPLEMENTATION: Craft elevation
+- 2026-11-13T07:36:30+07:00 decision D-008 scope/PFR-009 final diff vs requirement: in_scope (accept) JEV-20261113-2129b76f#scope
+- 2026-11-13T07:36:30+07:00 decision D-009 evidence/AC-PFR-009-001: sufficient (accept) JEV-20261113-2129b76f#e1
+- 2026-11-13T07:36:30+07:00 decision D-010 evidence/AC-PFR-009-002: sufficient (escalate) JEV-20261113-2129b76f#e2
+- 2026-11-13T07:36:30+07:00 decision D-011 evidence/AC-PFR-009-003: sufficient (escalate) JEV-20261113-2129b76f#e3
+- 2026-11-13T07:36:30+07:00 decision D-012 evidence/AC-PFR-009-004: sufficient (escalate) JEV-20261113-2129b76f#e4
+- 2026-11-13T07:37:30+07:00 decision D-013 severity/AA1: appropriate (escalate) JEV-20261113-2129b76f#sev
+- 2026-11-13T07:37:59+07:00 decision D-014 severity/AA2: appropriate (escalate) JEV-20261113-d9f61858#aa2
+- 2026-11-13T07:37:59+07:00 decision D-015 severity/AA3: appropriate (escalate) JEV-20261113-d9f61858#aa3
+- 2026-11-13T07:38:21+07:00 IMPLEMENTATION -> COMPLETED: Craft elevation shipped: atmosphere + art direction + premium details terverifikasi computed-style + headless QA

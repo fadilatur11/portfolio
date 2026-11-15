@@ -1,0 +1,2699 @@
+/* ==========================================================================
+   main.css — "dark code review" concept
+   The hero image IS the code: a borderless TypeScript file bleeding off the
+   right edge, a read-wave in the gutter, one amber-flagged line whose review
+   comment unfolds beneath it. Everything below the hero reads as case files.
+   ========================================================================== */
+
+/* ---- base ---------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* The canvas carries the base color; body stays transparent so the fixed
+   lamp-falloff layer (body::before) can sit between canvas and content. */
+html {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+body {
+  background: transparent;
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-display);
+  font-stretch: 100%;
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+ul[role='list'] {
+  list-style: none;
+}
+
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+::selection {
+  background: rgba(242, 179, 61, 0.28);
+  color: var(--ink);
+}
+
+/* thin dark scrollbar (reference): firefox via standard props, webkit below */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-3) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border: 3px solid var(--bg);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2b3034;
+}
+
+/* Lenis smooth-scroll (wired in App.jsx) */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+/* ---- lamp falloff (decorative) --------------------------------------------
+   Reference `.media`: ambient light behind the stage (radial hotspot upper
+   right) + a darker bottom-left corner. Fixed, full viewport, BEHIND all
+   content: z-index -1 (root stacking context, above html canvas, below every
+   in-flow child). Pure CSS, static — visible without JS, unaffected by
+   prefers-reduced-motion. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 80% at 78% 38%, #11161a 0%, rgba(17, 22, 26, 0) 70%),
+    radial-gradient(60% 60% at 0% 100%, #090a0b 0%, rgba(9, 10, 11, 0) 70%);
+  /* ambient background motion (PFR-010e): the inspection lamp breathes and
+     drifts — the stage light is alive, not a painted backdrop. The layer is
+     oversized (scale 1.08) so the drift never reveals an edge; transform-only
+     (composited), paused when the tab is hidden, off under reduced motion. */
+  transform: scale(1.08);
+  will-change: transform, opacity;
+  animation:
+    lamp-drift 34s ease-in-out infinite alternate,
+    lamp-breath 11s ease-in-out infinite;
+}
+
+@keyframes lamp-drift {
+  0% {
+    transform: scale(1.08) translate3d(0, 0, 0);
+  }
+  33% {
+    transform: scale(1.07) translate3d(-1.1%, 0.8%, 0);
+  }
+  66% {
+    transform: scale(1.09) translate3d(0.9%, -1%, 0);
+  }
+  100% {
+    transform: scale(1.08) translate3d(-0.6%, 1.2%, 0);
+  }
+}
+
+@keyframes lamp-breath {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.93;
+  }
+}
+
+/* ---- grain overlay (decorative) ------------------------------------------ */
+body::after {
+  content: '';
+  position: fixed;
+  inset: -50%;
+  z-index: 120;
+  pointer-events: none;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* film-grain shimmer (PFR-010e): 8-frame positional jitter via steps(1) —
+     the projector is running. Composited transform, cheap, tab-hidden pause. */
+  animation: grain-shift 0.9s steps(1) infinite;
+}
+
+@keyframes grain-shift {
+  0% { transform: translate3d(0, 0, 0); }
+  12.5% { transform: translate3d(-1.2%, 0.6%, 0); }
+  25% { transform: translate3d(0.8%, -0.9%, 0); }
+  37.5% { transform: translate3d(-0.5%, -1.1%, 0); }
+  50% { transform: translate3d(1.1%, 0.4%, 0); }
+  62.5% { transform: translate3d(-0.9%, -0.5%, 0); }
+  75% { transform: translate3d(0.4%, 1%, 0); }
+  87.5% { transform: translate3d(0.9%, -0.8%, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+/* ==========================================================================
+   BACKGROUND SPACE (PFR-010g) — "meteor strike" backdrop, after the OpenAI
+   cyber-at-the-frontier hero + the Migios amber-beam reference: an Earth
+   horizon curve at the viewport bottom (dark surface, faint city lights,
+   glowing amber atmosphere line) with a golden light beam striking down onto
+   the planet. z -2 BEHIND the lamp falloff (z -1); fixed cinematic frame.
+
+   Primary render: ONE WebGL pass on .planet-canvas (lib/strikeShader.js).
+   The .stars / .meteor / .meteor-strike layers below are the fallback scene,
+   mounted only when WebGL is unavailable ([data-mode='2d']).
+   ========================================================================== */
+.bg-space {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.stars {
+  position: absolute;
+  inset: -6%;
+  background-image:
+    radial-gradient(1.2px 1.2px at 22% 31%, rgba(255, 255, 255, 0.75), transparent 55%),
+    radial-gradient(1px 1px at 67% 18%, rgba(255, 255, 255, 0.55), transparent 55%),
+    radial-gradient(1.4px 1.4px at 81% 64%, rgba(255, 255, 255, 0.6), transparent 55%),
+    radial-gradient(1px 1px at 44% 78%, rgba(255, 255, 255, 0.4), transparent 55%),
+    radial-gradient(1.6px 1.6px at 12% 59%, rgba(242, 179, 61, 0.5), transparent 55%),
+    radial-gradient(1px 1px at 91% 41%, rgba(255, 255, 255, 0.45), transparent 55%);
+  background-size: 620px 620px, 480px 480px, 700px 700px, 540px 540px, 760px 760px, 500px 500px;
+  opacity: 0.55;
+  animation: star-drift 140s ease-in-out infinite alternate;
+}
+
+@keyframes star-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-1.5%, 1.8%, 0);
+  }
+}
+
+/* ---- meteor (one streak, 14s cycle — visible only ~6% of the timeline) ---- */
+.meteor {
+  position: absolute;
+  top: 7vh;
+  left: 80%;
+  width: 130px;
+  height: 1.5px;
+  background: linear-gradient(90deg, rgba(255, 240, 210, 0), rgba(255, 233, 184, 0.9) 45%, #fff 85%);
+  transform: rotate(-32deg);
+  opacity: 0;
+  animation: meteor-streak 14s linear infinite;
+}
+
+@keyframes meteor-streak {
+  0% {
+    transform: translate(0, 0) rotate(-32deg);
+    opacity: 0;
+  }
+  1.5% {
+    opacity: 0.9;
+  }
+  5.5% {
+    transform: translate(-26vw, 20vh) rotate(-32deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-26vw, 20vh) rotate(-32deg);
+    opacity: 0;
+  }
+}
+
+/* ---- planet horizon (drawn once on <canvas> by lib/planetCanvas.js) ------ */
+.planet-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- the strike: golden beam from the top, impact bloom on the horizon ---- */
+/* volumetric light shaft — the beam illuminates the atmosphere around it */
+.shaft {
+  position: absolute;
+  top: -2vh;
+  left: calc(50% - 150px);
+  width: 300px;
+  height: 74vh;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 222, 160, 0.13) 0%,
+    rgba(242, 179, 61, 0.2) 85%
+  );
+  clip-path: polygon(41% 0, 59% 0, 72% 100%, 28% 100%);
+  filter: blur(18px);
+  animation: shaft-flicker 7s ease-in-out infinite;
+}
+
+@keyframes shaft-flicker {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.meteor-strike {
+  position: absolute;
+  top: -2vh;
+  left: 50%;
+  width: 240px;
+  height: 74vh;
+  transform: translateX(-50%);
+}
+
+.beam-glow {
+  position: absolute;
+  top: 0;
+  left: calc(50% - 85px);
+  width: 170px;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(242, 179, 61, 0.16) 0%,
+    rgba(242, 179, 61, 0.22) 40%,
+    rgba(242, 179, 61, 0.38) 100%
+  );
+  filter: blur(26px);
+}
+
+.beam-core {
+  position: absolute;
+  top: 0;
+  left: calc(50% - 1.75px);
+  width: 3.5px;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 232, 190, 0.55) 0%,
+    rgba(255, 230, 175, 0.85) 18%,
+    rgba(255, 240, 205, 0.95) 62%,
+    #ffffff 100%
+  );
+  filter: blur(0.4px);
+}
+
+.beam-flow {
+  position: absolute;
+  top: 0;
+  left: calc(50% - 5px);
+  width: 10px;
+  height: 110px;
+  border-radius: 50%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 250, 235, 0) 0%,
+    rgba(255, 246, 224, 0.85) 55%,
+    rgba(255, 240, 200, 0) 100%
+  );
+  filter: blur(1.5px);
+  animation: beam-flow 2.9s ease-in infinite;
+}
+
+@keyframes beam-flow {
+  0% {
+    transform: translateY(-130px);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.95;
+  }
+  82% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(71vh);
+    opacity: 0;
+  }
+}
+
+.impact {
+  position: absolute;
+  bottom: -170px;
+  left: calc(50% - 190px);
+  width: 380px;
+  height: 380px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 246, 222, 0.65) 0%,
+    rgba(242, 179, 61, 0.4) 26%,
+    rgba(186, 92, 32, 0.16) 55%,
+    transparent 72%
+  );
+  animation: impact-pulse 5.5s ease-in-out infinite;
+}
+
+/* light splashing ALONG the horizon, both directions from the impact point —
+   the Migios signature: the glow travels sideways across the curve */
+.horizon-splash {
+  position: absolute;
+  bottom: -190px;
+  left: calc(50% - 620px);
+  width: 1240px;
+  height: 240px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 218, 150, 0.34) 0%,
+    rgba(242, 179, 61, 0.16) 38%,
+    rgba(186, 92, 32, 0.05) 62%,
+    transparent 78%
+  );
+  filter: blur(26px);
+  animation: splash-breathe 6.5s ease-in-out infinite;
+}
+
+@keyframes splash-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+@keyframes impact-pulse {
+  0%,
+  100% {
+    transform: scale(0.92);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+/* the hottest pixel — white contact ellipse where the beam meets the surface */
+.impact-core {
+  position: absolute;
+  bottom: -112px;
+  left: calc(50% - 44px);
+  width: 88px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    rgba(255, 250, 238, 0.95) 0%,
+    rgba(255, 228, 176, 0.5) 55%,
+    transparent 100%
+  );
+  filter: blur(5px);
+}
+
+/* ---- content veil ----------------------------------------------------------
+   Past the hero the planet turns to daylight, and a lit planet is too bright
+   for small text. Each content section therefore carries a dark veil that
+   feathers out through the section gap above it and the padding below it:
+   text always sits on the veil, and the scene shows at full strength in the
+   openings between sections. */
+/* main > … outranks the per-section padding shorthands further down */
+main > .work,
+main > .profile,
+main > .cv,
+main > .contact {
+  --veil: rgba(11, 13, 14, 0.72);
+  padding-bottom: 56px;
+  background: linear-gradient(
+    to bottom,
+    rgba(11, 13, 14, 0) 0,
+    rgba(11, 13, 14, 0) calc(var(--section-gap) * 0.3),
+    var(--veil) calc(var(--section-gap) * 0.82),
+    var(--veil) calc(100% - 56px),
+    rgba(11, 13, 14, 0) 100%
+  );
+}
+
+/* ambient background loops stop when the tab is hidden (.tab-hidden is
+   toggled on <html> by useAmbientPause) */
+.tab-hidden body::before,
+.tab-hidden body::after,
+.tab-hidden .bg-space,
+.tab-hidden .bg-space * {
+  animation-play-state: paused;
+}
+
+/* ---- grain overlay (decorative) ------------------------------------------ */
+body::after {
+  content: '';
+  position: fixed;
+  inset: -50%;
+  z-index: 120;
+  pointer-events: none;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---- utilities ------------------------------------------------------------ */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.mono-label {
+  font-family: var(--font-mono);
+  font-size: var(--micro);
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.mono-meta {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.display-1 {
+  font-size: var(--h2);
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: -0.028em;
+  line-height: 0.96;
+  color: var(--ink);
+}
+
+.display-2 {
+  font-size: clamp(40px, 5vw, 72px);
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: -0.028em;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.line {
+  display: block;
+  overflow: hidden;
+}
+
+.line-inner {
+  display: inline-block;
+}
+
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 300;
+  padding: 12px 18px;
+  background: var(--amber);
+  color: var(--amber-ink);
+  border-radius: var(--r-1);
+  font-weight: 600;
+  font-size: 14px;
+  translate: 0 -200%;
+  transition: translate var(--dur-2) var(--ease-expo);
+}
+
+.skip-link:focus-visible {
+  translate: 0 0;
+  outline-offset: 2px;
+}
+
+/* solid amber surfaces carry the reference bevel: a 1px darker bottom inset */
+.skip-link,
+.btn-solid,
+.dialog-cta {
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+}
+
+/* ==========================================================================
+   NAV — light glass header, amber-gutter-tick logo
+   ========================================================================== */
+.nav-sentinel {
+  position: absolute;
+  top: 0;
+  height: 8px;
+  width: 100%;
+  pointer-events: none;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  height: 68px;
+  padding: 0 var(--pad-x);
+  border-bottom: 1px solid transparent;
+  transition: background-color var(--dur-2) var(--ease-expo), border-color var(--dur-2) var(--ease-expo);
+}
+
+/* Hide-on-scroll translate is gated on [data-motion='ready'] (set by App once
+   JS is up) so the bar never slides on first paint; focus-within keeps it
+   reachable for keyboard users even while hidden. */
+html[data-motion='ready'] .nav {
+  transition: background-color var(--dur-2) var(--ease-expo), border-color var(--dur-2) var(--ease-expo),
+    translate var(--dur-3) var(--ease-expo);
+}
+
+.nav.is-scrolled {
+  background: rgba(11, 13, 14, 0.72);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-bottom-color: var(--line);
+}
+
+.nav.is-hidden {
+  translate: 0 -100%;
+}
+
+.nav:focus-within {
+  translate: 0 0;
+}
+
+.nav-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 18px;
+  font-weight: 600;
+  font-stretch: 88%;
+  letter-spacing: -0.02em;
+}
+
+.nav-mark {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  color: var(--ink-soft);
+}
+
+.nav-brand-word {
+  color: var(--ink);
+}
+
+.nav-brand-sub {
+  color: var(--dim);
+  font-weight: 500;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.nav-links a {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 12px;
+  font-size: var(--nav);
+  color: var(--muted);
+  background: linear-gradient(currentColor, currentColor) 12px calc(100% - 10px) / 0 1px no-repeat;
+  transition: color var(--dur-2) var(--ease-expo), background-size var(--dur-3) var(--ease-expo);
+}
+
+.nav-links a:hover,
+.nav-links a.is-active {
+  color: var(--ink);
+  background-size: calc(100% - 24px) 1px;
+}
+
+.nav-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-soft);
+  animation: status-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.nav-menu-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-1);
+  color: var(--ink);
+  background: rgba(11, 13, 14, 0.6);
+}
+
+.mobile-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 85;
+  background: rgba(11, 13, 14, 0.9);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+.mobile-menu[hidden] {
+  display: none;
+}
+
+.mobile-menu-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  padding: 88px var(--pad-x) 40px;
+}
+
+.mobile-menu-close {
+  position: absolute;
+  top: 14px;
+  right: var(--pad-x);
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-1);
+  font-size: 22px;
+  color: var(--ink);
+}
+
+.mobile-menu-nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-menu-nav a {
+  display: flex;
+  align-items: center;
+  min-height: 58px;
+  font-size: 26px;
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+
+.mobile-menu-foot {
+  margin-top: 28px;
+}
+
+/* PFR-010: one-shot panel entrance when the menu opens (not a persistent loop) */
+.mobile-menu.is-open .mobile-menu-panel {
+  animation: menu-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+
+/* ==========================================================================
+   PRELOADER — dark, amber counter
+   ========================================================================== */
+.preloader {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  will-change: transform; /* exit wipe is framer-driven (translateY -100%) */
+}
+
+.preloader-inner {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+
+.preloader-name {
+  font-size: clamp(22px, 3vw, 30px);
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: -0.02em;
+}
+
+.preloader-role {
+  color: var(--dim);
+}
+
+.preloader-count {
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: clamp(44px, 8vw, 76px);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--amber);
+}
+
+/* ==========================================================================
+   CUSTOM CURSOR — small amber dot + ink ring, blend difference
+   ========================================================================== */
+.cursor-fx {
+  pointer-events: none;
+}
+
+.cursor-dot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 210;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: var(--amber);
+}
+
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 209;
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  border: 1px solid rgba(233, 236, 233, 0.9);
+  border-radius: 50%;
+  mix-blend-mode: difference;
+}
+
+/* the inspection light (PFR-010): 520px amber wash under the ring, spring-
+   lagged deeper than the ring (stiffness 60 / damping 22 / mass 0.9 in
+   CustomCursor.jsx). One composited layer, transform/opacity only. */
+.cursor-glow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 208;
+  width: 520px;
+  height: 520px;
+  margin: -260px 0 0 -260px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(242, 179, 61, 0.10), transparent 70%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* ==========================================================================
+   HERO — copy column + the code stage
+   ========================================================================== */
+.hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+  min-height: calc(100svh - 68px);
+  padding-top: 68px;
+}
+
+.hero-copy {
+  grid-column: 1;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: clamp(16px, 5vh, 56px) clamp(20px, 3vw, 48px) clamp(28px, 5vh, 56px) var(--pad-x);
+}
+
+.hero-kicker {
+  color: var(--dim);
+  text-transform: none;
+  letter-spacing: 0.04em;
+  font-size: 12.5px;
+}
+
+.hero-title {
+  margin-top: 18px;
+  font-size: var(--h1);
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: -0.032em;
+  line-height: 0.95;
+}
+
+.hline {
+  display: block;
+  overflow: hidden;
+  padding: 0.06em 0.12em 0.14em;
+  margin: -0.06em -0.12em -0.14em;
+}
+
+.hline-inner {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.hero-lede {
+  max-width: 460px;
+  margin-top: 26px;
+  font-size: var(--lede);
+  line-height: 1.6;
+  letter-spacing: -0.008em;
+  color: var(--muted);
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: var(--r-1);
+  font-size: var(--btn);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  transition: background-color var(--dur-2) var(--ease-expo), border-color var(--dur-2) var(--ease-expo),
+    color var(--dur-2) var(--ease-expo);
+}
+
+.btn-solid {
+  background: var(--amber-soft);
+  border: 1px solid rgba(242, 179, 61, 0.4);
+  color: var(--amber-bright);
+}
+
+.btn-solid:hover {
+  background: rgba(242, 179, 61, 0.22);
+  border-color: var(--amber);
+}
+
+/* btn arrow nudge on hover (transform only) */
+.btn-arrow {
+  display: inline-block;
+  transition: translate var(--dur-2) var(--ease-expo);
+}
+
+.btn:hover .btn-arrow {
+  translate: 3px 0;
+}
+
+.btn-ghost {
+  border: 1px solid var(--line-strong);
+  background: rgba(233, 236, 233, 0.02);
+  color: var(--ink);
+}
+
+.btn-ghost:hover {
+  border-color: var(--line-ink);
+  background: rgba(233, 236, 233, 0.06);
+}
+
+/* hero buttons sit on the lit horizon: a dark backing under their own tint
+   keeps the label contrast independent of whatever the scene does behind */
+.hero-actions .btn {
+  position: relative;
+  isolation: isolate;
+}
+
+.hero-actions .btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgba(11, 13, 14, 0.66);
+}
+
+/* ---- the stage: borderless file, runs to the right viewport edge ----------
+   The hero grid is already full-width, so column 2 reaches the edge by itself
+   (no negative margins — those would create horizontal overflow).
+   Vertical mask = reference values: the stage never shows hard edges — it
+   dissolves into the page at both ends (transparent → 6%, solid 21% → 68%,
+   gone by 92%). --scan-dist mirrors the height clamp for the intro beam. */
+.hero-stage {
+  grid-column: 2;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  background: transparent; /* the fixed lamp falloff (body::before) shows through */
+  height: clamp(560px, 82vh, 860px);
+  --scan-dist: clamp(560px, 82vh, 860px);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, transparent 6%, #000 21%, #000 68%, transparent 92%);
+  mask-image: linear-gradient(180deg, transparent 0, transparent 6%, #000 21%, #000 68%, transparent 92%);
+  cursor: default;
+}
+
+/* ---- one-shot scan beam (reference sv-scan) --------------------------------
+   A one-line-height band with a bright 2px edge at the gutter sweeps down the
+   file exactly once during the intro. Decorative only: opacity 0 at rest and
+   hidden under prefers-reduced-motion. */
+.hero-stage::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--lh);
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    linear-gradient(
+      90deg,
+      transparent calc(var(--gutter) - 2px),
+      rgba(242, 179, 61, 0.9) calc(var(--gutter) - 2px),
+      rgba(242, 179, 61, 0.9) var(--gutter),
+      transparent var(--gutter)
+    ),
+    linear-gradient(180deg, rgba(242, 179, 61, 0) 0%, rgba(242, 179, 61, 0.1) 100%);
+}
+
+[data-intro='play'] .hero-stage::after {
+  animation: sv-scan 0.62s var(--ease-swift) 0.52s both;
+}
+
+@keyframes sv-scan {
+  0% {
+    transform: translateY(calc(-1 * var(--lh)));
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  82% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(var(--scan-dist));
+    opacity: 0;
+  }
+}
+
+/* the gutter rule: the page's margin line */
+.hero-stage::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--gutter) - 1px);
+  width: 1px;
+  background: rgba(233, 236, 233, 0.14);
+}
+
+.code {
+  padding-top: clamp(12px, 4vh, 44px);
+  font-family: var(--font-mono);
+  font-size: var(--code);
+  line-height: var(--lh);
+  font-variant-ligatures: none;
+}
+
+.code-after {
+  padding-top: 0;
+}
+
+.ln {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--gutter) minmax(0, 1fr);
+  height: var(--lh);
+  white-space: pre;
+  opacity: calc(var(--code-dim) + var(--lit, 0) * (1 - var(--code-dim)));
+  transition: opacity 0.45s var(--ease-settle);
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - var(--fade-r)), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - var(--fade-r)), transparent);
+}
+
+.ln .n {
+  padding-right: 16px;
+  text-align: right;
+  color: var(--num);
+  font-size: 0.84em;
+  font-variant-numeric: tabular-nums;
+}
+
+.ln .t {
+  padding-left: var(--code-pad);
+  color: rgba(233, 236, 233, 0.6);
+}
+
+.ln i {
+  font-style: normal;
+}
+
+.ln .k {
+  color: rgba(233, 236, 233, 0.85);
+}
+
+.ln .f {
+  color: #f0f2ee;
+}
+
+.ln .y {
+  color: rgba(233, 236, 233, 0.74);
+}
+
+.ln .s,
+.ln .m {
+  color: rgba(229, 219, 196, 0.82);
+}
+
+.ln .c {
+  color: rgba(233, 236, 233, 0.42);
+  font-style: italic;
+}
+
+/* the one amber token */
+.ln .hl {
+  color: var(--amber-bright);
+  background: var(--amber-soft);
+  border-radius: 2px;
+}
+
+/* ---- flagged line --------------------------------------------------------- */
+.ln.flag {
+  opacity: 1;
+}
+
+.ln.flag::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--amber-row), rgba(242, 179, 61, 0) 85%);
+  transform-origin: 0 50%;
+}
+
+.ln.flag .n {
+  color: var(--amber);
+}
+
+.ln.flag .t {
+  color: rgba(233, 236, 233, 0.8);
+}
+
+.ln.flag::after {
+  content: '';
+  position: absolute;
+  left: calc(var(--gutter) - 1px);
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--amber);
+  z-index: 1;
+  transform-origin: 50% 50%;
+}
+
+/* ---- review thread: unfolds into the gap below the flag -------------------- */
+.thread {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr;
+  padding: 10px var(--code-pad) 16px calc(var(--gutter) + var(--code-pad));
+  transition: grid-template-rows 0.6s var(--ease-expo);
+}
+
+.thread:not(.is-open) {
+  grid-template-rows: 0fr;
+}
+
+.thread::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--gutter) - 1px);
+  top: 0;
+  width: calc(var(--code-pad) + 1px);
+  height: 30px;
+  border-left: 2px solid var(--amber);
+  border-bottom: 1px solid var(--amber);
+  border-bottom-left-radius: 7px;
+}
+
+.thread-clip {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.comment {
+  position: relative;
+  max-width: var(--comment-w);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-1);
+  font-family: var(--font-display);
+  font-stretch: 100%;
+  font-size: 14.5px;
+  line-height: 1.55;
+  letter-spacing: -0.004em;
+  color: var(--ink-soft);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 24px 48px -28px rgba(0, 0, 0, 0.9);
+}
+
+.c-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.c-av {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: var(--surface-3);
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+  flex: none;
+}
+
+.c-av svg {
+  width: 15px;
+  height: 15px;
+}
+
+.c-who {
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 12px;
+}
+
+.c-when {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--dim);
+}
+
+.c-body {
+  padding: 12px 14px 14px;
+}
+
+.c-body p {
+  margin: 0;
+}
+
+.prefix {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  font-weight: 500;
+  color: var(--amber);
+  margin-right: 0.35em;
+}
+
+.stage-caption {
+  position: absolute;
+  right: var(--pad-x);
+  bottom: 18px;
+  z-index: 2;
+  color: var(--dim);
+}
+
+/* ---- caret (PFR-010): the reviewer is still in the file --------------------
+   ONE-SHOT intro: 4 blinks (1.1s step-end) then rests visible. Deliberately
+   NOT a third persistent loop — the ambient budget stays at 2. */
+.code-caret {
+  display: inline-block;
+  width: 9px;
+  height: 15px;
+  background: var(--amber);
+  vertical-align: middle;
+  margin-left: 6px;
+  animation: caret-blink 1.1s step-end 4 forwards;
+}
+
+/* Live-coding session (PFR-010b): when the caret re-parents into a token it
+   hugs the text tighter and trails a small gap; the intro blink has already
+   finished (fill forwards = solid) so it reads as a working cursor. */
+.code-caret.is-in-token {
+  margin-left: 1px;
+  margin-right: 3px;
+}
+
+@keyframes caret-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  99% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ---- hero stream mode (PFR-010c): LLM-style streaming copy ------------------
+   While the stream runs, the CSS rise/soft entrances on the streamed targets
+   are suppressed — the chars themselves are the reveal. The buttons keep
+   their hero-soft entrance (early CTA visibility is intentional). */
+[data-intro='play'][data-stream='on'] .hero-kicker,
+[data-intro='play'][data-stream='on'] .hero-lede {
+  animation: none;
+}
+
+[data-intro='play'][data-stream='on'] .hline-inner {
+  animation: none;
+}
+
+.stream-cursor {
+  display: inline-block;
+  width: 0.5em;
+  height: 0.82em;
+  margin-left: 0.12em;
+  background: var(--amber);
+  vertical-align: -0.06em;
+  animation: stream-blink 0.85s steps(1) infinite;
+}
+
+.stream-cursor.is-done {
+  animation: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+@keyframes stream-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  99% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ---- hero intro sequence (only when data-intro="play"; ≤1.6s) -------------- */
+[data-intro='play'] .hero-kicker {
+  animation: hero-soft 0.55s var(--ease-expo) 0.02s both;
+}
+
+[data-intro='play'] .hero-title .hline:nth-child(1) {
+  --d: 40ms;
+}
+
+[data-intro='play'] .hero-title .hline:nth-child(2) {
+  --d: 140ms;
+}
+
+[data-intro='play'] .hero-title .hline:nth-child(3) {
+  --d: 240ms;
+}
+
+[data-intro='play'] .hline-inner {
+  animation: hero-rise 0.75s var(--ease-expo) var(--d, 40ms) both;
+}
+
+[data-intro='play'] .hero-lede {
+  animation: hero-soft 0.6s var(--ease-expo) 0.46s both;
+}
+
+[data-intro='play'] .hero-actions .btn {
+  animation: hero-soft 0.6s var(--ease-expo) 0.58s both;
+}
+
+[data-intro='play'] .ln {
+  animation: ln-in 0.55s var(--ease-expo) both;
+  animation-delay: calc(140ms + var(--i, 0) * 26ms);
+}
+
+[data-intro='play'] .ln.flag::after {
+  animation: flag-bar 0.45s var(--ease-expo) 0.88s both;
+}
+
+[data-intro='play'] .ln.flag::before {
+  animation: flag-row 0.6s var(--ease-expo) 0.88s both;
+}
+
+[data-intro='play'] .ln.flag .n {
+  animation: flag-num 0.4s var(--ease-expo) 0.88s both;
+}
+
+[data-intro='play'] .ln.flag .hl {
+  animation: hl-in 0.45s var(--ease-expo) 0.92s both;
+}
+
+[data-intro='play'] .thread::before {
+  animation: conn-in 0.4s var(--ease-wipe) 1.02s both;
+}
+
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    translate: 0 110%;
+  }
+}
+
+@keyframes hero-soft {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+  }
+}
+
+@keyframes ln-in {
+  from {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+  }
+}
+
+@keyframes flag-bar {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes flag-row {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes flag-num {
+  from {
+    color: var(--num);
+  }
+}
+
+@keyframes hl-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes conn-in {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+}
+
+/* ---- ambient gutter read-wave (long slow loop, subtle) --------------------- */
+.hero-stage.is-reading .ln:not(.flag) .n {
+  animation: read-wave 8s linear calc(2.8s + var(--i, 0) * 0.085s) infinite;
+}
+
+@keyframes read-wave {
+  0%,
+  9%,
+  100% {
+    color: var(--num);
+  }
+  3% {
+    color: rgba(233, 236, 233, 0.78);
+  }
+}
+
+/* ambient budget: paused when the tab is hidden or the stage is offscreen */
+.tab-hidden .ln .n,
+.hero-stage.is-offscreen .ln .n {
+  animation-play-state: paused !important;
+}
+
+/* ==========================================================================
+   META STRIP (StatsBand)
+   ========================================================================== */
+.stats-band {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-raise);
+}
+
+.stats-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+  padding: 14px var(--pad-x);
+}
+
+/* per-character scroll reveal: the wrapper dissolves into the flex layout,
+   each word keeps nowrap so wrapping still happens between words */
+.strip-chars {
+  display: contents;
+}
+
+.strip-w {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.strip-k {
+  color: var(--dim);
+}
+
+.strip-v {
+  color: var(--ink-soft);
+}
+
+.strip-sep {
+  color: var(--faint);
+}
+
+/* ==========================================================================
+   WORK — case files
+   ========================================================================== */
+.work {
+  padding: var(--section-gap) var(--pad-x) 0;
+}
+
+.work-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  max-width: 720px;
+}
+
+.work-kicker {
+  text-transform: none;
+  letter-spacing: 0.06em;
+}
+
+.work-title .line-inner {
+  padding-right: 0.08em;
+}
+
+.work-meta {
+  margin-top: 4px;
+}
+
+.case-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(20px, 2.6vw, 36px);
+  margin-top: clamp(36px, 5vh, 64px);
+}
+
+/* premium case-file surface (reference card formula: surface-2 + hairline +
+   inner top highlight + deep soft drop) */
+.case-card {
+  position: relative;
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-2);
+  overflow: hidden;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 24px 48px -28px rgba(0, 0, 0, 0.9);
+  transition: border-color var(--dur-2) var(--ease-expo), translate var(--dur-2) var(--ease-expo),
+    box-shadow var(--dur-2) var(--ease-expo);
+}
+
+.case-card:hover {
+  border-color: rgba(242, 179, 61, 0.45);
+  translate: 0 -4px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 24px 48px -28px rgba(0, 0, 0, 0.9),
+    0 32px 64px -32px rgba(0, 0, 0, 0.95);
+}
+
+/* ---- physical hover (PFR-010): tilt + inspection-light glow ----------------
+   useTilt writes --rx/--ry (±4°), --gx/--gy and --img-x/--img-y on the li;
+   the custom properties inherit down to .case-inner and the screenshot. The
+   transform lives on the INNER wrapper (never on the motion.li, whose framer
+   entrance transform must stay untouched). dataset.state='move' kills the
+   transition while the pointer drives it; leaving ('settle') hands the ease
+   back to CSS. */
+.case-inner {
+  position: relative;
+  height: 100%;
+  display: block;
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transform-style: preserve-3d;
+  will-change: transform;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.case-inner[data-state='move'] {
+  transition: none;
+}
+
+.case-inner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    360px circle at var(--gx, 50%) var(--gy, 50%),
+    rgba(242, 179, 61, 0.08),
+    transparent 65%
+  );
+  opacity: 0;
+  transition: opacity 0.35s;
+  pointer-events: none;
+}
+
+.case-card:hover .case-inner::after {
+  opacity: 1;
+}
+
+.case-desc {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  padding: 14px 18px 16px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--dim);
+}
+
+.case-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.case-ref {
+  flex: none;
+  color: var(--dim);
+}
+
+.case-name {
+  margin-right: auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(18px, 1.6vw, 24px);
+  font-weight: 600;
+  font-stretch: 88%;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+
+.badge {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  transition: box-shadow var(--dur-2) var(--ease-expo);
+}
+
+/* verdict badge glow on card hover — subtle, amber at low alpha, non-looped */
+.case-card:hover .badge,
+.case-card:focus-within .badge {
+  box-shadow: 0 0 0 4px rgba(242, 179, 61, 0.16);
+}
+
+.badge-tick {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+.badge-recent {
+  color: var(--amber);
+  background: var(--amber-soft);
+  border: 1px solid rgba(242, 179, 61, 0.32);
+}
+
+.badge-shipped {
+  color: var(--muted);
+  background: rgba(233, 236, 233, 0.05);
+  border: 1px solid var(--line);
+}
+
+/* ---- framed screenshot: a mounted plate inside the card --------------------
+   Raw 2017 screenshots carry browser chrome (top ≈ 9% of frame) and a Windows
+   taskbar (bottom ≈ 4%): each card crops them out via --img-zoom /
+   --img-tx / --img-ty (map below, measured per image), keeping the page
+   content. Translate percentages resolve against the plate box; zoom supplies
+   the crop. Static values — visible without JS and under reduced motion. */
+.case-view {
+  position: relative;
+  margin: 14px 18px 0;
+  background: var(--surface-3);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-1);
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+}
+
+.case-view-media {
+  width: 100%;
+  height: 100%;
+}
+
+/* PFR-010: one merged transform — inner-image parallax (--img-x/--img-y from
+   useTilt) + the art-directed crop (--img-tx/--img-ty percentages) + zoom
+   (crop × hover). Order matters: the crop translate sits BEFORE scale so its
+   effective offset stays identical to the previous standalone rule (percent
+   resolve pre-scale); hover zoom is now a --img-hover var flip instead of a
+   second transform rule, so the parallax never fights the zoom. */
+.case-view-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
+  transform: translate3d(var(--img-x, 0px), var(--img-y, 0px), 0)
+    translate(var(--img-tx, 0%), var(--img-ty, 0%))
+    scale(calc(var(--img-zoom, 1) * var(--img-hover, 1)));
+  filter: saturate(0.88);
+  transition: transform 0.25s ease-out, filter var(--dur-2) var(--ease-expo);
+}
+
+.case-card:hover .case-view-media img {
+  --img-hover: 1.045;
+  filter: saturate(1);
+}
+
+/* soft bottom scrim inside the frame — keeps the caption chip readable */
+.case-view::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 38%;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(11, 13, 14, 0) 0%, rgba(11, 13, 14, 0.62) 100%);
+}
+
+/* mono caption chip, bottom-left inside the frame (real type/year from data) */
+.case-chip {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 1;
+  padding: 5px 9px;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  background: rgba(11, 13, 14, 0.72);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* per-card crop map (01–06 follow the featured order in data/projects.js) */
+.case-view--01 {
+  /* olsera backoffice login — clean capture, zoom onto the panel */
+  --img-zoom: 1.32;
+  --img-ty: -8.4%;
+}
+
+.case-view--02 {
+  /* javamifi.com — keep logo, drop chrome + taskbar + status link */
+  --img-zoom: 1.177;
+  --img-tx: 4.6%;
+  --img-ty: -1.9%;
+}
+
+.case-view--03 {
+  /* ekoperasi login — drop chrome bar, keep rocket + panel */
+  --img-zoom: 1.12;
+  --img-ty: -3.35%;
+}
+
+.case-view--04 {
+  /* medivac asia — drop chrome + taskbar, keep logo */
+  --img-zoom: 1.16;
+  --img-tx: 0.75%;
+  --img-ty: -2.4%;
+}
+
+.case-view--05 {
+  /* disolonline — drop chrome + taskbar, keep logo */
+  --img-zoom: 1.16;
+  --img-tx: 0.75%;
+  --img-ty: -2.5%;
+}
+
+.case-view--06 {
+  /* niveamen topskor — keep ribbon logo, drop chrome + taskbar */
+  --img-zoom: 1.155;
+  --img-tx: 5.4%;
+  --img-ty: -2.2%;
+}
+
+.case-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.case-hint-arrow {
+  display: inline-block;
+  transition: translate var(--dur-2) var(--ease-expo), color var(--dur-2) var(--ease-expo);
+}
+
+.case-card:hover .case-hint-arrow,
+.case-card:focus-within .case-hint-arrow {
+  translate: 3px -3px;
+  color: var(--amber);
+}
+
+/* ---- archive ticker -------------------------------------------------------- */
+.work-archive {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(20px, 4vw, 56px);
+  margin-top: clamp(56px, 8vh, 96px);
+  border-top: 1px solid var(--line);
+  padding-top: clamp(28px, 4vh, 44px);
+}
+
+.archive-count {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: clamp(36px, 4vw, 56px);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.archive-body {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 12px;
+}
+
+.ticker {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker-scroll 38s linear infinite;
+}
+
+.ticker.is-paused .ticker-track {
+  animation-play-state: paused;
+}
+
+/* PFR-010: scroll-velocity skew lands on this wrapper (framer transform);
+   the CSS ticker-scroll keyframe translation stays on the ul below it. */
+.ticker-skew {
+  will-change: transform;
+}
+
+@keyframes ticker-scroll {
+  to {
+    translate: -50% 0;
+  }
+}
+
+.ticker-group {
+  display: flex;
+  align-items: center;
+  gap: 44px;
+  padding-right: 44px;
+}
+
+.ticker-name {
+  font-family: var(--font-mono);
+  font-size: clamp(15px, 1.4vw, 20px);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   PROFILE — bio as a JSDoc block, skills as mono chips
+   ========================================================================== */
+.profile {
+  padding: var(--section-gap) var(--pad-x) 0;
+}
+
+.profile-title .line-inner {
+  padding-right: 0.08em;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: clamp(28px, 4vw, 64px);
+  align-items: start;
+  margin-top: clamp(32px, 5vh, 56px);
+}
+
+.jsdoc {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  padding: 24px 26px 24px 60px;
+}
+
+.jsdoc::before,
+.jsdoc::after {
+  position: absolute;
+  left: 22px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--faint);
+}
+
+.jsdoc::before {
+  content: '/**';
+  top: 22px;
+}
+
+.jsdoc::after {
+  content: '*/';
+  bottom: 22px;
+}
+
+.jsdoc-body {
+  font-size: clamp(15px, 1.15vw, 17px);
+  line-height: 1.7;
+  letter-spacing: -0.005em;
+  color: var(--ink-soft);
+}
+
+.profile-skills .mono-label {
+  margin-bottom: 4px;
+}
+
+.skill-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.skill-chip {
+  padding: 10px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-1);
+  background: rgba(233, 236, 233, 0.03);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-soft);
+  transition: translate 0.25s var(--ease-expo), border-color 0.25s var(--ease-expo),
+    background-color 0.25s var(--ease-expo), color var(--dur-1) var(--ease-expo);
+}
+
+/* Lift via the individual `translate` property (NOT transform): the chips are
+   motion.li elements whose inline framer transform would override any
+   stylesheet transform. Amber = "the flag" marks the inspected item. */
+.skill-chip:hover {
+  translate: 0 -2px;
+  border-color: rgba(242, 179, 61, 0.45);
+  background: rgba(242, 179, 61, 0.07);
+  color: var(--ink);
+}
+
+.profile-meta {
+  margin-top: 30px;
+  color: var(--dim);
+}
+
+/* ==========================================================================
+   CV — file card with amber action
+   ========================================================================== */
+.cv {
+  padding: var(--section-gap) var(--pad-x) 0;
+}
+
+.cv-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(18px, 3vh, 26px);
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  padding: clamp(24px, 4vw, 48px);
+  transition: border-color var(--dur-2) var(--ease-expo), translate var(--dur-2) var(--ease-expo),
+    box-shadow var(--dur-2) var(--ease-expo);
+}
+
+/* PFR-010: static pointer glow (CSS-only, no JS vars) — the lamp over the file */
+.cv-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(420px circle at 50% 40%, rgba(242, 179, 61, 0.07), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.35s var(--ease-expo);
+  pointer-events: none;
+}
+
+.cv-card:hover::after {
+  opacity: 1;
+}
+
+.cv-card:hover {
+  border-color: rgba(242, 179, 61, 0.45);
+  translate: 0 -4px;
+  box-shadow: 0 24px 48px -32px rgba(0, 0, 0, 0.85);
+}
+
+.cv-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 13px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-1);
+  background: rgba(233, 236, 233, 0.03);
+  color: var(--muted);
+  text-transform: none;
+  letter-spacing: 0.04em;
+  font-size: 12.5px;
+}
+
+.cv-file svg {
+  width: 14px;
+  height: 14px;
+}
+
+.cv-word {
+  display: block;
+  font-size: var(--h2);
+}
+
+.rise-word {
+  display: block;
+}
+
+.rise-letter {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+}
+
+.rise-letter > span {
+  display: inline-block;
+}
+
+.cv-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: var(--amber);
+}
+
+.cv-action span[aria-hidden] {
+  transition: translate var(--dur-2) var(--ease-expo);
+}
+
+.cv-card:hover .cv-action span[aria-hidden] {
+  translate: 3px -3px;
+}
+
+/* ==========================================================================
+   CONTACT
+   ========================================================================== */
+.contact {
+  padding: var(--section-gap) var(--pad-x) 0;
+}
+
+.contact-title .line-inner {
+  padding-right: 0.08em;
+}
+
+.contact-email {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: clamp(24px, 4vh, 40px);
+  min-height: 44px;
+  font-family: var(--font-mono);
+  font-size: clamp(17px, 2.2vw, 27px);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  border-bottom: 1px solid var(--line-strong);
+  padding-bottom: 6px;
+  transition: border-color var(--dur-2) var(--ease-expo);
+}
+
+.contact-email:hover {
+  border-bottom-color: var(--line-ink);
+}
+
+/* PFR-010: fill-wipe — amber floods from the left, text flips to ink-dark.
+   The ::before sits at z-index -1 inside the anchor; the anchor's framer
+   transform creates a stacking context, so the fill stays behind the text
+   nodes (email text + arrow keep painting above it). CSS-only. */
+.contact-email::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--amber);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  transition: transform 0.35s var(--ease-expo);
+}
+
+.contact-email:hover::before {
+  transform: scaleX(1);
+}
+
+.contact-email:hover {
+  color: #0b0d0e;
+}
+
+.contact-email:hover .email-arrow {
+  color: #0b0d0e;
+}
+
+/* the drawn underline: scaleX 0 → 1 once in view (framer), origin left */
+.email-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: var(--line-ink);
+  transform-origin: 0 50%;
+  pointer-events: none;
+}
+
+.email-arrow {
+  transition: translate var(--dur-2) var(--ease-expo);
+}
+
+.contact-email:hover .email-arrow {
+  translate: 4px -4px;
+}
+
+.contact-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: clamp(36px, 6vh, 64px);
+}
+
+.contact-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+
+/* PFR-010: rows read further right on hover; `translate` (individual property)
+   because these are motion.p elements with inline framer transforms. */
+.contact-row {
+  transition: translate 0.25s var(--ease-expo);
+}
+
+.contact-row:hover {
+  translate: 6px 0;
+}
+
+.contact-row:hover .mono-label {
+  color: var(--amber);
+}
+
+.contact-social {
+  display: flex;
+  gap: 20px;
+}
+
+.contact-social a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--muted);
+  transition: color var(--dur-1) var(--ease-expo);
+}
+
+.contact-social a:hover {
+  color: var(--ink);
+}
+
+/* ==========================================================================
+   FOOTER — minimal mono
+   ========================================================================== */
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: var(--section-gap);
+  border-top: 1px solid var(--line);
+  padding: 20px var(--pad-x) 30px;
+}
+
+.footer-name {
+  font-weight: 600;
+  font-stretch: 88%;
+  letter-spacing: -0.015em;
+  color: var(--ink-soft);
+}
+
+.footer-copy {
+  margin-left: auto;
+  color: var(--dim);
+}
+
+.footer-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--muted);
+  transition: color var(--dur-1) var(--ease-expo);
+}
+
+.footer-top:hover {
+  color: var(--ink);
+}
+
+/* ==========================================================================
+   PROJECT DIALOG — dark surface (component markup untouched)
+   ========================================================================== */
+.project-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  height: fit-content;
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(84vh, 900px);
+  padding: 0;
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-3);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 24px 48px -28px rgba(0, 0, 0, 0.9),
+    0 48px 96px -48px rgba(0, 0, 0, 0.95);
+}
+
+/* ==========================================================================
+   PFR-010 — CONTINUOUS MOTION LAYER
+   scroll progress bar: the reviewer's eye moving through the page
+   ========================================================================== */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 200; /* above .nav (90); scaleX + transformOrigin set inline by framer */
+  background: var(--amber);
+  transform-origin: 0 50%;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   TOUCH — coarse pointer: no tilt, no inspection-light glow (useTilt never
+   attaches listeners without (hover: hover) and (pointer: fine); this is the
+   CSS safety net so touch never sees a half-state)
+   ========================================================================== */
+@media (hover: none) {
+  .case-inner {
+    transform: none;
+  }
+
+  .case-inner::after {
+    display: none;
+  }
+}
+
+/* ---- dialog motion ---------------------------------------------------------
+   Open: keyframe scale .96 → 1 + opacity 0 → 1, 280ms expo (works everywhere).
+   Close: 200ms reverse via discrete transitions (display/overlay allow-discrete)
+   so the dialog keeps animating while leaving the top layer in browsers that
+   support it; everywhere else it closes instantly and stays fully functional.
+   The closed state is display:none by UA default, so the resting opacity:0
+   below never hides reachable content. */
+.project-dialog {
+  opacity: 0;
+  scale: 0.96;
+  transition: opacity 200ms var(--ease-expo), scale 200ms var(--ease-expo), overlay 200ms allow-discrete,
+    display 200ms allow-discrete;
+}
+
+.project-dialog[open] {
+  opacity: 1;
+  scale: 1;
+  transition: opacity 280ms var(--ease-expo), scale 280ms var(--ease-expo), overlay 280ms allow-discrete,
+    display 280ms allow-discrete;
+  animation: dialog-in 280ms var(--ease-expo);
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+
+.project-dialog::backdrop {
+  background: rgba(6, 7, 8, 0.72);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 240ms var(--ease-expo), overlay 240ms allow-discrete, display 240ms allow-discrete;
+}
+
+.project-dialog[open]::backdrop {
+  opacity: 1;
+}
+
+.dialog-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-1);
+  background: rgba(11, 13, 14, 0.6);
+  color: var(--ink);
+  font-size: 20px;
+  line-height: 1;
+  transition: border-color var(--dur-1) var(--ease-expo), background-color var(--dur-1) var(--ease-expo);
+}
+
+.dialog-close:hover {
+  border-color: var(--line-ink);
+  background: rgba(233, 236, 233, 0.08);
+}
+
+.dialog-body {
+  display: grid;
+  gap: 16px;
+  padding: clamp(24px, 4vw, 40px);
+}
+
+.dialog-img {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  background: var(--surface-3);
+}
+
+.dialog-desc {
+  font-size: 15.5px;
+  line-height: 1.65;
+  color: var(--ink-soft);
+}
+
+.dialog-cta {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: var(--r-1);
+  background: var(--amber-soft);
+  border: 1px solid rgba(242, 179, 61, 0.4);
+  color: var(--amber-bright);
+  font-weight: 500;
+  transition: background-color var(--dur-2) var(--ease-expo), border-color var(--dur-2) var(--ease-expo);
+}
+
+.dialog-cta:hover {
+  background: rgba(242, 179, 61, 0.22);
+  border-color: var(--amber);
+}
+
+/* ==========================================================================
+   RESPONSIVE — stage stacks below copy ≤834px, full width, no bleed
+   ========================================================================== */
+/* ==========================================================================
+   MATERIAL PASS — panels belong to the scene
+   The backdrop is lit from above by one beam; the panels used to be flat
+   opaque grey slabs with an even outline, which read as a different site
+   pasted on top. Now every panel shares one material:
+     - slightly translucent, so the planet's colour reaches through it
+     - a surface that is lighter at the top edge and falls off downward
+     - a border that catches light on top and nearly vanishes at the bottom
+   Hover states (amber rim, lift, tilt) are untouched and still win.
+   ========================================================================== */
+.case-card,
+.jsdoc,
+.cv-card {
+  border-color: transparent;
+  background:
+    linear-gradient(180deg, rgba(25, 28, 30, 0.84) 0%, rgba(19, 21, 23, 0.78) 34%, rgba(14, 16, 17, 0.82) 100%) padding-box,
+    linear-gradient(180deg, rgba(233, 236, 233, 0.24) 0%, rgba(233, 236, 233, 0.07) 42%, rgba(233, 236, 233, 0.04) 100%) border-box;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 30px 60px -32px rgba(0, 0, 0, 0.9);
+}
+
+/* small controls: the same top-lit edge at chip scale */
+.skill-chip,
+.cv-file {
+  border-color: transparent;
+  background:
+    linear-gradient(180deg, rgba(38, 42, 45, 0.82), rgba(22, 24, 26, 0.8)) padding-box,
+    linear-gradient(180deg, rgba(233, 236, 233, 0.3), rgba(233, 236, 233, 0.08)) border-box;
+}
+
+.skill-chip:hover {
+  border-color: rgba(242, 179, 61, 0.45);
+  background: rgba(40, 33, 18, 0.88);
+}
+
+/* screenshots are old, bright sites: at rest they sit back into the night
+   palette, and come up to full colour under the pointer */
+@media (hover: hover) {
+  .case-view-media img {
+    filter: saturate(0.78) brightness(0.84);
+  }
+
+  .case-card:hover .case-view-media img {
+    filter: saturate(1) brightness(1);
+  }
+}
+
+/* rules that fade out toward both ends, like the limb, instead of full-width
+   hairlines */
+.stats-band {
+  background: rgba(13, 15, 16, 0.86);
+  border-image: linear-gradient(90deg, rgba(233, 236, 233, 0), rgba(233, 236, 233, 0.16) 18%, rgba(233, 236, 233, 0.16) 82%, rgba(233, 236, 233, 0)) 1;
+}
+
+.work-archive {
+  border-top-color: transparent;
+  background: linear-gradient(90deg, rgba(233, 236, 233, 0), rgba(233, 236, 233, 0.16) 14%, rgba(233, 236, 233, 0.16) 86%, rgba(233, 236, 233, 0)) top / 100% 1px no-repeat;
+}
+
+.footer {
+  border-top-color: transparent;
+  background:
+    linear-gradient(90deg, rgba(233, 236, 233, 0), rgba(233, 236, 233, 0.16) 14%, rgba(233, 236, 233, 0.16) 86%, rgba(233, 236, 233, 0)) top / 100% 1px no-repeat,
+    rgba(11, 13, 14, 0.7);
+}
+
+@media (max-width: 834px) {
+  .hero {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding-top: 84px;
+  }
+
+  .hero-copy {
+    padding: 8px var(--pad-x) 0;
+  }
+
+  .hline-inner {
+    white-space: normal;
+  }
+
+  .hero-stage {
+    order: 2;
+    margin-top: 26px;
+    height: clamp(380px, 62vh, 560px);
+    --scan-dist: clamp(380px, 62vh, 560px);
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, transparent 8%, #000 24%, #000 72%, transparent 94%);
+    mask-image: linear-gradient(180deg, transparent 0, transparent 8%, #000 24%, #000 72%, transparent 94%);
+  }
+
+  .stage-caption {
+    position: static;
+    order: 3;
+    padding: 16px var(--pad-x) 0;
+  }
+
+  .case-list {
+    grid-template-columns: 1fr;
+  }
+
+  .work-archive {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 18px;
+  }
+
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .contact-meta {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .nav-links,
+  .nav-status {
+    display: none;
+  }
+
+  .nav-menu-btn {
+    display: inline-flex;
+    margin-left: auto;
+  }
+}
+
+@media (min-width: 835px) {
+  .mobile-menu {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hero-actions .btn {
+    width: 100%;
+  }
+
+  .footer {
+    flex-wrap: wrap;
+    gap: 10px 18px;
+  }
+
+  .footer-copy {
+    margin-left: 0;
+    flex-basis: 100%;
+    order: 3;
+  }
+
+  .thread {
+    padding-right: 10px;
+  }
+}
+
+/* ==========================================================================
+   REDUCED MOTION — page fully visible, no animation, ruler off (JS-gated)
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  /* the one-shot scan beam never runs: rest state = invisible */
+  .hero-stage::after {
+    display: none;
+  }
+
+  .hero-stage.is-reading .ln .n,
+  .ticker-track,
+  .status-dot {
+    animation: none !important;
+  }
+
+  .ln,
+  .thread {
+    transition: none;
+  }
+
+  /* full-motion pass: everything new collapses to rest state */
+  .nav.is-hidden,
+  .nav:focus-within {
+    translate: none;
+  }
+
+  /* PFR-010c: the stream cursor never exists under reduced motion (the hook
+     is inert and the copy renders complete) — belt and suspenders */
+  .stream-cursor {
+    display: none !important;
+  }
+
+  /* PFR-010e/f: background ambience collapses to the static rest state */
+  body::before,
+  body::after,
+  .bg-space,
+  .bg-space * {
+    animation: none !important;
+  }
+
+  body::before {
+    transform: none;
+  }
+
+  .case-hint-arrow,
+  .btn-arrow,
+  .cv-action span[aria-hidden],
+  .email-arrow {
+    transition: none;
+  }
+
+  .badge,
+  .case-card,
+  .cv-card,
+  .skill-chip {
+    transition-duration: 1ms;
+  }
+
+  .project-dialog,
+  .project-dialog::backdrop {
+    transition: none;
+  }
+
+  .project-dialog[open] {
+    animation: none;
+  }
+
+  .project-dialog[open]::backdrop {
+    opacity: 1;
+  }
+
+  /* PFR-010: every new continuous/hover effect collapses to rest state
+     (non-gating — content stays fully visible). JS gates already keep
+     ScrollProgress/useTilt/decode/cursor-glow inert here; these are the CSS
+     safety nets. */
+  .scroll-progress,
+  .cursor-glow,
+  .case-inner::after,
+  .cv-card::after {
+    display: none;
+  }
+
+  .code-caret {
+    animation: none;
+  }
+
+  .case-inner {
+    transform: none;
+    transition: none;
+  }
+
+  .case-view-media img {
+    transition: none;
+  }
+
+  .skill-chip:hover,
+  .contact-row:hover {
+    translate: none;
+  }
+
+  .skill-chip,
+  .contact-row,
+  .contact-email::before {
+    transition: none;
+  }
+
+  .mobile-menu.is-open .mobile-menu-panel {
+    animation: none;
+  }
+}

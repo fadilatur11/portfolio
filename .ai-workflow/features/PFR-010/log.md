@@ -1,0 +1,32 @@
+- 2026-11-15T09:22:05+07:00 created (feature, prd-lite, standard) -> REQUEST_CLASSIFIED
+- 2026-11-15T09:22:36+07:00 decision D-001 mode/MODE: standard (accept) JEV-20261115-6847cba7#mode
+- 2026-11-15T09:22:36+07:00 decision D-002 risk/RISK: low (accept) JEV-20261115-6847cba7#risk
+- 2026-11-15T09:26:04+07:00 REQUEST_CLASSIFIED -> REQUIREMENT_READY
+- 2026-11-15T09:26:11+07:00 REQUIREMENT_READY -> TECHNICAL_PLANNING
+- 2026-11-15T09:26:11+07:00 TECHNICAL_PLANNING -> RISK_ASSESSMENT
+- 2026-11-15T09:26:11+07:00 RISK_ASSESSMENT -> TASK_ORCHESTRATION
+- 2026-11-15T09:27:43+07:00 decision D-003 analysis/ANALYSIS: yes (escalate) JEV-20261115-fd14af9e#analysis
+- 2026-11-15T09:27:43+07:00 decision D-004 criticality/REQ-PFR-010-001: yes (escalate) JEV-20261115-fd14af9e#crit_001
+- 2026-11-15T09:27:44+07:00 decision D-005 criticality/REQ-PFR-010-002: no (escalate) JEV-20261115-fd14af9e#crit_002
+- 2026-11-15T09:27:44+07:00 decision D-006 criticality/REQ-PFR-010-003: no (escalate) JEV-20261115-fd14af9e#crit_003
+- 2026-11-15T09:27:44+07:00 decision D-007 criticality/REQ-PFR-010-004: no (escalate) JEV-20261115-fd14af9e#crit_004
+- 2026-11-15T09:27:44+07:00 decision D-008 criticality/REQ-PFR-010-005: yes (escalate) JEV-20261115-fd14af9e#crit_005
+- 2026-11-15T09:27:44+07:00 decision D-009 criticality/REQ-PFR-010-006: yes (escalate) JEV-20261115-fd14af9e#crit_006
+- 2026-11-15T09:27:44+07:00 decision D-010 criticality/REQ-PFR-010-007: no (escalate) JEV-20261115-fd14af9e#crit_007
+- 2026-11-15T09:27:44+07:00 TASK_ORCHESTRATION -> IMPLEMENTATION
+- 2026-11-15T10:12:55+07:00 decision D-011 scope/SCOPE: yes (accept) JEV-20261115-bce08477#scope
+- 2026-11-15T10:12:55+07:00 decision D-012 evidence/AC-PFR-010-001: yes (escalate) JEV-20261115-bce08477#evidence_ac1
+- 2026-11-15T10:12:55+07:00 decision D-013 evidence/AC-PFR-010-002: yes (escalate) JEV-20261115-bce08477#evidence_ac2
+- 2026-11-15T10:12:55+07:00 decision D-014 evidence/AC-PFR-010-003: no (escalate) JEV-20261115-bce08477#evidence_ac3
+- 2026-11-15T10:12:55+07:00 decision D-015 evidence/AC-PFR-010-004: yes (escalate) JEV-20261115-bce08477#evidence_ac4
+- 2026-11-15T10:12:56+07:00 decision D-016 evidence/AC-PFR-010-005: no (escalate) JEV-20261115-bce08477#evidence_ac5
+- 2026-11-15T10:12:56+07:00 decision D-017 evidence/AC-PFR-010-006: yes (escalate) JEV-20261115-bce08477#evidence_ac6
+- 2026-11-15T10:14:46+07:00 decision D-018 severity/RF-1: medium (escalate) JEV-20261115-0cb6fee0#sev_rf1
+- 2026-11-15T10:14:46+07:00 decision D-019 severity/RF-2: low (accept) JEV-20261115-0cb6fee0#sev_rf2
+- 2026-11-15T10:14:46+07:00 decision D-020 severity/RF-3: low (accept) JEV-20261115-0cb6fee0#sev_rf3
+- 2026-11-15T10:14:46+07:00 decision D-021 severity/RF-4: low (accept) JEV-20261115-0cb6fee0#sev_rf4
+- 2026-11-15T10:15:18+07:00 IMPLEMENTATION -> VERIFICATION
+- 2026-11-15T10:15:18+07:00 VERIFICATION -> INDEPENDENT_REVIEW
+- 2026-11-15T10:15:18+07:00 INDEPENDENT_REVIEW -> DOCUMENTATION_UPDATE
+- 2026-11-15T10:15:18+07:00 DOCUMENTATION_UPDATE -> FINAL_VALIDATION
+- 2026-11-15T10:15:18+07:00 FINAL_VALIDATION -> COMPLETED

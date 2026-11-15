@@ -1,0 +1,75 @@
+import { useCallback, useEffect, useState } from 'react'
+import { AnimatePresence, MotionConfig } from 'framer-motion'
+import Lenis from 'lenis'
+import Nav from './components/Nav.jsx'
+import Preloader from './components/Preloader.jsx'
+import CustomCursor from './components/CustomCursor.jsx'
+import ScrollProgress from './components/ScrollProgress.jsx'
+import BackgroundSpace from './components/BackgroundSpace.jsx'
+import Hero from './components/Hero.jsx'
+import StatsBand from './components/StatsBand.jsx'
+import Work from './components/Work.jsx'
+import ProfileSection from './components/ProfileSection.jsx'
+import Cv from './components/Cv.jsx'
+import Contact from './components/Contact.jsx'
+import Footer from './components/Footer.jsx'
+import { useReducedMotion } from './hooks/useReducedMotion.js'
+
+export default function App() {
+  const reduced = useReducedMotion()
+  const [loading, setLoading] = useState(false)
+  const [introReady, setIntroReady] = useState(false)
+
+  useEffect(() => {
+    setLoading(!reduced)
+  }, [reduced])
+
+  // Motion gate: marks the document as JS/motion-ready so CSS can enable
+  // transitions that must never flash on first paint (e.g. nav translate).
+  useEffect(() => {
+    document.documentElement.dataset.motion = 'ready'
+  }, [])
+
+  const handlePreloaderDone = useCallback(() => {
+    setLoading(false)
+    setIntroReady(true)
+  }, [])
+
+  useEffect(() => {
+    if (reduced) return undefined
+    const lenis = new Lenis({ lerp: 0.085, smoothWheel: true })
+    window.__lenis = lenis
+    let raf
+    const loop = (t) => {
+      lenis.raf(t)
+      raf = requestAnimationFrame(loop)
+    }
+    raf = requestAnimationFrame(loop)
+    return () => {
+      cancelAnimationFrame(raf)
+      lenis.destroy()
+      delete window.__lenis
+    }
+  }, [reduced])
+
+  return (
+    <MotionConfig reducedMotion="user">
+      <AnimatePresence>
+        {loading && <Preloader onDone={handlePreloaderDone} />}
+      </AnimatePresence>
+      <BackgroundSpace lit={introReady || reduced} />
+      <CustomCursor />
+      <ScrollProgress />
+      <Nav />
+      <main id="main">
+        <Hero playIntro={introReady && !reduced} />
+        <StatsBand />
+        <Work />
+        <ProfileSection />
+        <Cv />
+        <Contact />
+      </main>
+      <Footer />
+    </MotionConfig>
+  )
+}

@@ -1,0 +1,35 @@
+import { motion } from 'framer-motion'
+import { EXPO, MASK_LINE, groupProps } from '../lib/motion.js'
+import { useReducedMotion } from '../hooks/useReducedMotion.js'
+
+/**
+ * MaskedHeading — display heading whose lines rise inside overflow-hidden
+ * `.line` wrappers (y 112% → 0, staggered). Markup shape (h-tag > .line >
+ * .line-inner) is identical to the static version, so accessible names and
+ * CSS hooks are unchanged.
+ *
+ * - `inherited`: when inside an orchestrated parent (variants propagate from
+ *   the parent), the heading does not create its own whileInView trigger.
+ * - Under reduced motion nothing is hidden: no initial state is applied.
+ */
+export default function MaskedHeading({ as = 'h2', className, lines, inherited = false, delayChildren = 0.04 }) {
+  const reduced = useReducedMotion()
+  const MotionTag = motion[as]
+  const trigger = inherited ? {} : groupProps(reduced, { step: 0.07, delayChildren, margin: '-12% 0px' })
+
+  return (
+    <MotionTag className={className} {...trigger}>
+      {lines.map((line) => (
+        <span className="line" key={line}>
+          <motion.span
+            className="line-inner"
+            variants={reduced ? undefined : MASK_LINE}
+            transition={reduced ? undefined : { duration: 0.6, ease: EXPO }}
+          >
+            {line}
+          </motion.span>
+        </span>
+      ))}
+    </MotionTag>
+  )
+}

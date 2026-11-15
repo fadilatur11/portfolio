@@ -1,0 +1,87 @@
+import { useRef } from 'react'
+import { motion, useScroll, useTransform } from 'framer-motion'
+import { site } from '../data/site.js'
+import { useReducedMotion } from '../hooks/useReducedMotion.js'
+import { revealProps } from '../lib/motion.js'
+
+/* Segments preserve the original strip colouring; each segment is split into
+   words (nowrap) so the strip still wraps between words on small screens. */
+function buildWords(handle) {
+  const segs = [
+    { cls: 'strip-k', text: 'profile:' },
+    { cls: 'strip-v', text: handle },
+    { cls: 'strip-sep', text: '·' },
+    { cls: '', text: 'fullstack — 4+ yrs' },
+    { cls: 'strip-sep', text: '·' },
+    { cls: '', text: '6 featured' },
+    { cls: 'strip-sep', text: '·' },
+    { cls: '', text: '7 archived' },
+  ]
+  const words = []
+  segs.forEach(({ cls, text }) => {
+    text.split(' ').forEach((w) => words.push({ cls, text: w }))
+  })
+  return words
+}
+
+/* One character of the strip: opacity 0.2 → 1 across its slice of the scroll
+   progress (transform/opacity only). Under reduced motion the hook stays
+   mounted (stable hook order) but the style is pinned to full opacity. */
+function Char({ progress, start, end, reduced, children }) {
+  const opacity = useTransform(progress, [start, end], [0.2, 1])
+  return <motion.span style={reduced ? { opacity: 1 } : { opacity }}>{children}</motion.span>
+}
+
+/**
+ * Meta strip under the hero — real numbers only (4+ yrs, 6 featured, 7 archived),
+ * styled like a file metadata line. Full-motion pass: per-character reveal
+ * driven by scroll progress across the strip (motion-kit #10 pattern).
+ * The wrapper <p> keeps an aria-label with the full line; all rendered
+ * characters are aria-hidden, so the accessible text is unchanged.
+ */
+export default function StatsBand() {
+  const reduced = useReducedMotion()
+  const stripRef = useRef(null)
+  const handle = site.github.split('/').pop()
+  const words = buildWords(handle)
+  const label = words.map((w) => w.text).join(' ')
+
+  const { scrollYProgress } = useScroll({ target: stripRef, offset: ['start 0.92', 'start 0.5'] })
+  const total = words.reduce((n, w) => n + w.text.length, 0)
+  let seen = 0
+
+  return (
+    <motion.div
+      className="stats-band"
+      {...revealProps(reduced, { y: 18, duration: 0.6, margin: '-5% 0px' })}
+    >
+      <p className="stats-strip mono-meta" ref={stripRef} aria-label={label}>
+        <span className="strip-chars" aria-hidden="true">
+          {words.map((w, wi) => {
+            const chars = Array.from(w.text).map((c, ci) => {
+              const start = ((seen + ci) / total) * 0.82
+              return (
+                <Char
+                  key={`${wi}-${ci}`}
+                  progress={scrollYProgress}
+                  start={start}
+                  end={Math.min(start + 0.18, 1)}
+                  reduced={reduced}
+                >
+                  {c}
+                </Char>
+              )
+            })
+            seen += w.text.length
+            return (
+              <span className={`strip-w${w.cls ? ` ${w.cls}` : ''}`} key={wi}>
+                {chars}
+                {wi < words.length - 1 ? ' ' : null}
+              </span>
+            )
+          })}
+        </span>
+      </p>
+    </motion.div>
+  )
+}

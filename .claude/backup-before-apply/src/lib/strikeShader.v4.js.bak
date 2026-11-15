@@ -1,0 +1,630 @@
+/**
+ * strikeShader — the "meteor strike" backdrop as ONE real-time render pass.
+ *
+ * Why a shader instead of stacked CSS layers: in the CSS version every light
+ * was a separate blurred box, so nothing lit anything else and every edge was
+ * a geometric edge. Here the scene is computed per pixel from one light:
+ *   - the planet is a sphere (surface detail foreshortens toward the limb)
+ *   - the beam is thin in vacuum and blooms where the atmosphere gets dense
+ *   - the same light pools on the surface, glints on the ocean, lights clouds
+ *   - HDR values go through a filmic tonemap, then dither (no banding)
+ * Palette stays the design system's: monochrome night + the one amber.
+ */
+
+const VERT = `
+attribute vec2 aPos;
+void main() {
+  gl_Position = vec4(aPos, 0.0, 1.0);
+}
+`
+
+const FRAG = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+
+uniform vec2 uRes;
+uniform float uTime;
+uniform float uIntro;   // 0 → 1: the strike ignites once the page is revealed
+uniform float uScroll;  // scrollY / viewport height
+uniform vec2 uPointer;  // smoothed pointer, -1..1
+uniform float uImpactX; // 0..1 across the viewport
+uniform float uApex;    // horizon apex, 0 (top) .. 1 (bottom)
+uniform float uCalm;    // 1 when copy sits on the beam axis: the light steps back
+uniform float uBeamTop; // the beam only shows below this line (-1 = whole frame)
+uniform vec4 uFlag;     // x0,y0,x1,y1 (viewport-height units): small copy to keep light off
+
+const vec3 AMBER = vec3(1.0, 0.56, 0.13);
+const vec3 HOT = vec3(1.0, 0.86, 0.62);
+const vec3 BG = vec3(0.0431, 0.0510, 0.0549); // --bg #0b0d0e
+
+// pow() with a negative base is undefined in GLSL (NaN on real GPUs)
+float sq(float x) {
+  return x * x;
+}
+
+float hash21(vec2 p) {
+  p = fract(p * vec2(123.34, 456.21));
+  p += dot(p, p + 45.32);
+  return fract(p.x * p.y);
+}
+
+float hash11(float n) {
+  return fract(sin(n * 127.1) * 43758.5453);
+}
+
+float vnoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  float a = hash21(i);
+  float b = hash21(i + vec2(1.0, 0.0));
+  float c = hash21(i + vec2(0.0, 1.0));
+  float d = hash21(i + vec2(1.0, 1.0));
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+float fbm4(vec2 p) {
+  float s = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 4; i++) {
+    s += a * vnoise(p);
+    p = p * 2.03 + vec2(17.3, 9.1);
+    a *= 0.5;
+  }
+  return s / 0.9375;
+}
+
+float fbm5(vec2 p) {
+  float s = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 5; i++) {
+    s += a * vnoise(p);
+    p = mat2(1.6, 1.2, -1.2, 1.6) * p + vec2(17.3, 9.1);
+    a *= 0.5;
+  }
+  return s / 0.96875;
+}
+
+float fbm3(vec2 p) {
+  float s = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 3; i++) {
+    s += a * vnoise(p);
+    p = p * 2.1 + vec2(5.7, 13.9);
+    a *= 0.5;
+  }
+  return s / 0.875;
+}
+
+vec3 aces(vec3 x) {
+  return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
+}
+
+float starLayer(vec2 p, float scale, float density, float t) {
+  vec2 g = p * scale;
+  vec2 id = floor(g);
+  vec2 f = fract(g) - 0.5;
+  float rnd = hash21(id);
+  if (rnd < density) return 0.0;
+  vec2 off = vec2(hash21(id + 3.1), hash21(id + 7.7)) - 0.5;
+  float d = length(f - off * 0.7);
+  float mag = (rnd - density) / (1.0 - density);
+  float tw = 0.72 + 0.28 * sin(t * (0.6 + 2.2 * hash21(id + 1.3)) + rnd * 40.0);
+  return exp(-d * d * 520.0) * (0.3 + mag * mag * 1.9) * tw;
+}
+
+float cityLayer(vec2 g) {
+  vec2 id = floor(g);
+  float rnd = hash21(id);
+  if (rnd < 0.7) return 0.0;
+  vec2 dd = fract(g) - 0.5 - (vec2(hash21(id + 2.0), hash21(id + 5.0)) - 0.5) * 0.6;
+  return exp(-dot(dd, dd) * (150.0 + 260.0 * hash21(id + 9.0))) * (0.45 + 0.75 * hash21(id + 11.0));
+}
+
+void main() {
+  float aspect = uRes.x / uRes.y;
+  float px = 1.0 / uRes.y;
+  // p: x 0..aspect, y 0 (top) .. 1 (bottom), in viewport-height units
+  vec2 p = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y) * px;
+  float t = uTime;
+
+  /* ---- camera: slow handheld sway + pointer parallax + scroll lift ------- */
+  vec2 sway = vec2(
+    sin(t * 0.11) + sin(t * 0.073 + 1.3),
+    sin(t * 0.091 + 2.1) + sin(t * 0.057 + 0.4)
+  ) * 0.25;
+  vec2 cam = uPointer * 0.85 + sway;
+  float sc = clamp(uScroll, 0.0, 2.0);
+  float day = smoothstep(0.3, 1.25, sc);
+  // the planet climbs into frame as the day comes up
+  float lift = 0.07 * smoothstep(0.0, 1.2, sc) + 0.10 * day;
+
+  float R = max(1.5 * aspect, 0.95);
+  float apexY = uApex - lift - cam.y * 0.006;
+  vec2 imp = vec2(uImpactX * aspect - cam.x * 0.010, apexY);
+  vec2 c = imp + vec2(0.0, R);
+  vec2 q = p - c;
+  float r = length(q);
+
+  /* ---- ignition timeline ------------------------------------------------ */
+  float beamHead = mix(-0.25, apexY + 0.02, smoothstep(0.0, 0.55, uIntro));
+  float lit = smoothstep(0.5, 1.0, uIntro);          // light has reached the surface
+  float flash = exp(-max(uIntro - 0.55, 0.0) * 9.0) * step(0.55, uIntro) * (1.0 - smoothstep(0.95, 1.0, uIntro));
+  // irregular flicker (noise in time, not a sine): the light source is alive
+  float flick = 0.9 + 0.2 * vnoise(vec2(t * 2.3, 4.0)) * vnoise(vec2(t * 0.7, 9.0)) * 2.0;
+  float quiet = 1.0 - 0.45 * uCalm;
+  // the strike belongs to the hero: past it the beam goes out and only a
+  // warm horizon and the stars stay behind the content
+  float strike = 1.0 - smoothstep(0.2, 0.75, sc);
+  float power = (lit * flick + flash * 1.6) * quiet * mix(0.2, 1.0, strike);
+
+  // arc length along the limb from the impact point
+  float arc = abs(atan(q.x, -q.y)) * R;
+  float along = 1.0 / (1.0 + (arc / 0.24) * (arc / 0.24));
+  float alongThin = exp(-arc / 0.14); // the hairline limb dies off faster than the glow
+
+  // a pulse of light travelling outward along the horizon after each beat
+  float beat = fract(t / 7.5);
+  float ring = exp(-sq((arc - beat * 2.2) / (0.06 + beat * 0.2))) * (1.0 - beat) * (1.0 - beat) * exp(-arc / 0.8);
+
+  /* ---- sunrise: scrolling past the hero turns the planet toward the sun ---- */
+  // the sun starts behind the planet and climbs over the limb, so the
+  // terminator sweeps from the horizon toward the camera
+  vec3 sunDir = normalize(mix(vec3(0.25, -0.12, -1.0), vec3(0.4, -1.0, 0.3), day));
+  float dawn = sin(day * 3.14159); // strongest while the sun crosses the limb
+
+  vec3 col = vec3(0.0);
+  vec3 keep = vec3(0.0); // hairline lights the copy flag must not cut
+  float occl = 1.0; // how much of deep space is visible at this pixel
+
+  if (r < R) {
+    /* ================= planet surface ================================== */
+    float z = sqrt(max(R * R - r * r, 0.0));
+    float depth = R - r;
+    vec3 n = vec3(q, z) / R;
+    // grazing view: x across, z toward the camera; the planet turns slowly
+    vec2 sp = vec2(q.x, z);
+    float spin = t * 0.006;
+    float grazing = smoothstep(0.0, 0.14, z); // detail only fades right at the limb
+
+    // coastlines: broad continents with a fine, crisp edge
+    vec2 lp = sp * 1.5 + vec2(spin + 3.0, 1.0);
+    float landN = fbm5(lp) + (fbm3(lp * 7.0) - 0.5) * 0.045;
+    float land = smoothstep(0.538, 0.556, landN);
+
+    // distance over the surface from the impact point, and the way to it
+    vec3 toImp = vec3(0.0, -1.0, 0.0) - n;
+    float dist = R * length(toImp);
+    float fall = 1.0 / (1.0 + sq(dist / 0.34));
+    vec3 light = mix(HOT, AMBER, smoothstep(0.0, 0.8, dist)) * fall * power;
+
+    // clouds: weather systems + wisps; a second sample toward the light gives
+    // each bank a lit edge and a shadowed back instead of a flat veil
+    vec2 cp = sp * vec2(2.0, 2.9) + vec2(spin * 2.6 - 4.0, t * 0.002 + 8.0);
+    vec2 lightDir = normalize(vec2(-q.x, -z) + vec2(0.0001, 0.0));
+    // domain warp curls the banks into weather systems; fine wisps fray the edges
+    vec2 warp = (vec2(fbm3(cp * 0.8 + 2.7), fbm3(cp * 0.8 + 9.4)) - 0.5) * 1.5;
+    float wisps = (fbm3(cp * 5.5 + warp * 2.0) - 0.5) * 0.16;
+    float cloudN = fbm5(cp + warp) + wisps;
+    float cloudL = fbm5(cp + warp + lightDir * 0.09) + wisps;
+    float cloud = smoothstep(0.5, 0.62, cloudN) * mix(0.3, 1.0, grazing);
+    float relief = clamp((cloudN - cloudL) * 7.0 + 0.5, 0.0, 1.0);
+
+    // night side: starlight only
+    vec3 ocean = vec3(0.006, 0.010, 0.016);
+    vec3 ground = vec3(0.016, 0.019, 0.022);
+    vec3 surf = mix(ocean, ground, land * grazing);
+    surf *= 0.55 + 0.45 * smoothstep(0.0, 0.5, depth * 3.0 + 0.2);
+
+    // diffuse response to the strike: water stays dark, land takes the light
+    float albedo = mix(0.035, 0.26, land);
+    surf += light * albedo * (0.55 + 0.9 * landN);
+
+    // ocean glint: the beam's reflection running toward the camera
+    float wave = vnoise(sp * vec2(26.0, 9.0) + vec2(t * 0.25, -t * 0.4));
+    float glint = exp(-sq(q.x / (0.03 + z * 0.075))) / (1.0 + z * 2.4);
+    surf += HOT * glint * (0.25 + 1.1 * wave * wave) * (1.0 - land) * (1.0 - cloud) * power * 0.45;
+
+    // rotated, two scales, jittered: reads as settlements, never as a dot grid
+    vec2 cs = mat2(0.8, -0.6, 0.6, 0.8) * (sp + vec2(spin, 0.0));
+    float pop = smoothstep(0.42, 0.7, fbm3(sp * 3.2 + vec2(spin * 3.2 + 20.0, 5.0)));
+    float city = (cityLayer(cs * 37.0) + 0.6 * cityLayer(cs * 71.0 + 13.0)) * pop * land * grazing;
+    // cities glow where it is still night; the strike washes them out nearby
+    surf += vec3(1.0, 0.66, 0.26) * city * (1.0 - cloud) * (0.95 - 0.6 * fall);
+
+    // cloud deck over everything: dim starlit sheet, warm on the lit edges
+    vec3 cloudCol = vec3(0.022, 0.026, 0.032) + light * (0.10 + 0.62 * relief);
+    surf = mix(surf, cloudCol, cloud * 0.82);
+
+    // atmosphere seen edge-on, in front of the surface
+    float haze = exp(-depth / 0.006);
+    surf += vec3(0.20, 0.26, 0.36) * haze * 0.10;
+    surf += mix(AMBER, HOT, along) * haze * (alongThin * 1.1 + ring * 0.7) * power;
+    surf += AMBER * exp(-depth / 0.035) * along * 0.09 * power;
+
+    /* daylight: blue water, muted land, bright cloud tops; cities switch off */
+    float ndl = dot(n, sunDir);
+    float sunlit = smoothstep(-0.06, 0.22, ndl) * day;
+    surf -= vec3(1.0, 0.66, 0.26) * city * (1.0 - cloud) * (0.95 - 0.6 * fall) * sunlit;
+    float shade = 0.45 + 0.55 * smoothstep(0.0, 0.6, ndl);
+    vec3 waterDay = vec3(0.014, 0.042, 0.105) * (0.75 + 0.5 * wave * (1.0 - grazing * 0.6));
+    // shallows brighten toward the coast
+    waterDay += vec3(0.0, 0.030, 0.036) * smoothstep(0.40, 0.5, landN);
+    // terrain: forest in the lowlands, dry ground inland, broken up by relief
+    float terrain = fbm5(sp * 6.5 + vec2(spin * 6.5 + 2.0, 11.0));
+    vec3 landDay = mix(vec3(0.030, 0.052, 0.028), vec3(0.105, 0.088, 0.058), smoothstep(0.38, 0.66, terrain + (landN - 0.6) * 1.4));
+    landDay *= 0.7 + 0.7 * terrain;
+    vec3 dayCol = mix(waterDay, landDay, land * grazing) * shade;
+    // low sun rakes across the cloud deck: lit tops, blue-grey shadows
+    float reliefSun = clamp((cloudN - wisps - fbm5(cp + warp + normalize(sunDir.xz + vec2(0.0001, 0.0)) * 0.085)) * 7.0 + 0.55, 0.0, 1.0);
+    vec3 cloudDay = mix(vec3(0.050, 0.066, 0.095), vec3(0.190, 0.195, 0.200), reliefSun) * shade;
+    dayCol = mix(dayCol, cloudDay, cloud * 0.9);
+    // sunrise warms the first light before it turns neutral
+    dayCol *= mix(vec3(1.0), vec3(1.25, 0.95, 0.7), dawn * 0.6);
+    // stacked layouts put more text over the planet: daylight steps back a little
+    dayCol *= 1.0 - 0.22 * uCalm;
+    surf = mix(surf, dayCol, sunlit);
+    // air seen edge-on turns blue in daylight
+    surf += vec3(0.18, 0.36, 0.75) * exp(-depth / 0.014) * 0.22 * sunlit;
+
+    col = surf;
+    occl = 0.0;
+  } else {
+    /* ================= sky above the limb =============================== */
+    float h = r - R;
+    // thin bright limb + two wider scattering shells, reddening outward
+    col += HOT * exp(-h / 0.0035) * 1.5 * (alongThin + 0.02) * power;
+    vec3 atmo = AMBER * exp(-h / 0.016) * 0.4
+      + vec3(0.9, 0.34, 0.07) * exp(-h / 0.07) * 0.07;
+    col += atmo * (along + 0.03) * power;
+    col += AMBER * exp(-h / 0.010) * ring * 1.0 * power;
+    // starlit rim so the horizon still reads far from the strike
+    col += vec3(0.20, 0.26, 0.36) * exp(-h / 0.006) * 0.12;
+    // day side: thin blue limb and a wider scattering shell
+    col += vec3(0.55, 0.75, 1.0) * exp(-h / 0.0035) * 0.55 * day;
+    col += vec3(0.10, 0.24, 0.55) * exp(-h / 0.022) * 0.20 * day;
+    // the sun itself breaking over the horizon where the beam struck
+    col += vec3(1.0, 0.72, 0.42) * exp(-h / 0.012) * exp(-arc / 0.16) * 0.9 * dawn;
+    occl = 1.0 - exp(-h / 0.02) * 0.8;
+  }
+
+  /* ---- the beam: thin in vacuum, blooming as the air thickens ------------ */
+  float alt = max(apexY - p.y, 0.0);
+  float lean = cam.x * 0.012;
+  float dx = abs(p.x - imp.x - lean * alt);
+  float above = step(p.y, apexY + 0.004) * smoothstep(beamHead, beamHead - 0.10, p.y)
+    * smoothstep(uBeamTop, uBeamTop + 0.09, p.y);
+  float air = exp(-alt / 0.24);
+
+  float coreW = max(0.0013, 1.1 * px);
+  float core = exp(-sq(dx / coreW));
+  float inner = 1.0 / (1.0 + sq(dx / 0.005));
+
+  // dust drifting through the shaft makes the light volume visible
+  float fog = fbm3(vec2((p.x - imp.x) * 3.2 + t * 0.012, p.y * 2.2 - t * 0.045));
+  // long vertical streaks: dust lit along the beam reads as rays
+  float fog2 = fbm3(vec2((p.x - imp.x) * 16.0 + t * 0.02, p.y * 1.1 - t * 0.09));
+  float haloW = mix(0.011, 0.058, air);
+  float halo = exp(-dx / haloW) * (0.03 + 0.34 * air) * (0.4 + 1.1 * fog) * (0.45 + 1.1 * fog2);
+
+  // energy travelling down the beam, accelerating into the surface
+  float pulses = 0.0;
+  for (int i = 0; i < 3; i++) {
+    float fi = float(i);
+    float ph = fract(t * (0.19 + fi * 0.03) + fi * 0.37);
+    float py = pow(ph, 1.7) * (apexY + 0.2) - 0.1;
+    pulses += exp(-sq((p.y - py) / (0.035 + ph * 0.05))) * sin(ph * 3.14159);
+  }
+
+  float headGlow = exp(-sq((p.y - beamHead) / 0.022)) * (1.0 - smoothstep(0.5, 0.7, uIntro));
+  float beamOn = smoothstep(0.0, 0.08, uIntro) * (0.85 + 0.15 * flick) * strike;
+  vec3 beam = HOT * core * (2.6 + pulses * 3.0)
+    + mix(AMBER, HOT, 0.45) * inner * (0.34 + pulses * 0.5);
+  keep += beam * quiet * above * beamOn;
+  col += vec3(1.0, 0.5, 0.09) * halo * quiet * above * beamOn;
+  col += HOT * headGlow * exp(-dx / 0.007) * 2.4 * beamOn;
+
+  /* ---- impact: hot contact point, bloom shells, anamorphic streak -------- */
+  vec2 d = p - imp;
+  float dl = length(d);
+  float hit = power * strike;
+  keep += vec3(1.0, 0.95, 0.86) * exp(-dot(d, d) / 0.00008) * 4.5 * hit;
+  // four-point glint: short vertical arm crossing the anamorphic streak
+  keep += HOT * exp(-sq(d.x / 0.0022)) * exp(-sq(d.y / 0.03)) * 0.5 * hit;
+  col += mix(AMBER, HOT, 0.5) * exp(-dl / 0.022) * 0.7 * hit;
+  col += AMBER * exp(-dl / 0.10) * 0.14 * hit;
+  col += vec3(0.9, 0.34, 0.07) * exp(-dl / 0.30) * 0.025 * hit;
+  float streak = exp(-sq(d.y / 0.0030)) / (1.0 + sq(d.x / 0.10));
+  col += mix(AMBER, HOT, 0.6) * streak * 0.5 * hit;
+
+  /* ---- embers lifted off the impact, lit by the beam --------------------- */
+  for (int i = 0; i < 12; i++) {
+    float fi = float(i);
+    float s1 = hash11(fi + 1.0);
+    float s2 = hash11(fi + 31.0);
+    float life = fract(t * (0.035 + s1 * 0.04) + s2);
+    vec2 ep = imp + vec2(
+      (s1 - 0.5) * 0.3 * pow(life, 0.6) + sin(t * 0.3 + fi) * 0.012 * life,
+      -life * (0.10 + s2 * 0.34)
+    );
+    float er = (0.7 + s2 * 0.9) * px + 0.0003;
+    float e = exp(-dot(p - ep, p - ep) / (er * er));
+    col += mix(HOT, AMBER, life) * e * sin(life * 3.14159) * (0.4 + 0.6 * hash11(fi + 77.0)) * lit * strike;
+  }
+
+  /* ---- deep space: stars and one occasional meteor ----------------------- */
+  if (occl > 0.01) {
+    vec2 sp2 = p + cam * vec2(0.003, 0.002) + vec2(t * 0.0006, lift * 0.3);
+    float big = starLayer(sp2, 46.0, 0.945, t);
+    float small = starLayer(sp2 + 9.3, 92.0, 0.95, t);
+    float wash = exp(-dot(col, vec3(1.0)) * 6.0); // bright air hides faint stars
+    float temp = hash21(floor(sp2 * 46.0) + 4.4);
+    vec3 tint = mix(vec3(0.78, 0.85, 1.0), vec3(1.0, 0.9, 0.78), temp);
+    col += (tint * big * 0.5 + vec3(0.8, 0.84, 0.92) * small * 0.2) * occl * wash * (1.0 - 0.45 * day);
+
+    float cyc = t / 13.0;
+    float mph = fract(cyc);
+    if (mph < 0.07) {
+      float k = mph / 0.07;
+      float seed = floor(cyc);
+      // starts clear of the nav and never reaches the headline column
+      vec2 a = vec2(aspect * (0.64 + 0.33 * hash11(seed + 4.0)), 0.11 + 0.18 * hash11(seed + 8.0));
+      vec2 dir = normalize(vec2(-0.86, 0.5));
+      vec2 head = a + dir * k * 0.32;
+      vec2 rel = p - head;
+      float back = clamp(dot(rel, -dir), 0.0, 0.16);
+      float dm = length(rel + dir * back);
+      float trail = exp(-dm * dm / (px * px * 2.2 + 0.0000012)) * (1.0 - back / 0.16);
+      col += vec3(1.0, 0.94, 0.82) * trail * sin(k * 3.14159) * occl * 0.9 * (1.0 - uCalm) * strike;
+    }
+  }
+
+  /* ---- flag: light is kept off the body copy, feathered like a real flag -- */
+  vec2 fh = (uFlag.zw - uFlag.xy) * 0.5;
+  vec2 fd = abs(p - (uFlag.xy + uFlag.zw) * 0.5) - fh;
+  float fsd = length(max(fd, 0.0)) + min(max(fd.x, fd.y), 0.0);
+  col *= mix(0.035, 1.0, smoothstep(-0.02, 0.26, fsd));
+  col += keep;
+
+  /* ---- lens: exposure, vignette, filmic tonemap, dither ------------------ */
+  float exposure = mix(1.0, 0.45, smoothstep(0.1, 0.75, sc));
+  vec2 vc = (p - vec2(aspect * 0.5, 0.5)) / vec2(max(aspect, 1.0), 1.0);
+  float vig = 1.0 - 0.42 * smoothstep(0.25, 0.85, length(vc));
+  col *= exposure * vig;
+
+  vec3 mapped = pow(aces(col * 1.15), vec3(1.0 / 2.2));
+  vec3 outc = BG + mapped * (1.0 - BG);
+  outc += (hash21(gl_FragCoord.xy + fract(t) * 61.0) - 0.5) / 255.0;
+  gl_FragColor = vec4(outc, 1.0);
+}
+`
+
+function compile(gl, type, source) {
+  const shader = gl.createShader(type)
+  gl.shaderSource(shader, source)
+  gl.compileShader(shader)
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    const log = gl.getShaderInfoLog(shader)
+    gl.deleteShader(shader)
+    throw new Error(`strike shader compile: ${log}`)
+  }
+  return shader
+}
+
+const INTRO_SECONDS = 2.2
+const STILL_TIME = 21.4 // the composed frame shown under reduced motion
+const MAX_PIXELS = 2560 * 1440
+const MIN_QUALITY = 0.6
+const DEFAULT_APEX = 0.71
+const MIN_APEX = 0.66
+const MAX_APEX = 0.815
+
+/**
+ * Returns null when WebGL is unavailable (caller falls back to the 2D scene).
+ * Throws only on shader compile/link failure — the caller catches.
+ */
+export function createStrikeRenderer(canvas, { reducedMotion = false, impactX = 0.5, compose = null } = {}) {
+  const attrs = { alpha: false, antialias: false, depth: false, stencil: false, preserveDrawingBuffer: false }
+  const gl =
+    (canvas.getContext && (canvas.getContext('webgl', attrs) || canvas.getContext('experimental-webgl', attrs))) || null
+  if (!gl) return null
+
+  const program = gl.createProgram()
+  gl.attachShader(program, compile(gl, gl.VERTEX_SHADER, VERT))
+  gl.attachShader(program, compile(gl, gl.FRAGMENT_SHADER, FRAG))
+  gl.linkProgram(program)
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    throw new Error(`strike shader link: ${gl.getProgramInfoLog(program)}`)
+  }
+  gl.useProgram(program)
+
+  const buffer = gl.createBuffer()
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW)
+  const aPos = gl.getAttribLocation(program, 'aPos')
+  gl.enableVertexAttribArray(aPos)
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0)
+
+  const u = {}
+  for (const name of ['uRes', 'uTime', 'uIntro', 'uScroll', 'uPointer', 'uImpactX', 'uApex', 'uCalm', 'uBeamTop', 'uFlag']) {
+    u[name] = gl.getUniformLocation(program, name)
+  }
+
+  let quality = 1
+  let raf = 0
+  let running = false
+  let destroyed = false
+  let litAt = reducedMotion ? -Infinity : null // timestamp (s) the strike ignited
+  let clock = 0 // scene seconds; only advances while frames are drawn
+  let last = 0
+  let slowFrames = 0
+  let frames = 0
+  const pointer = { x: 0, y: 0, tx: 0, ty: 0 }
+  // composition follows the page: where the horizon may sit, and whether the
+  // beam has to step back because copy lies on its axis
+  const NO_FLAG = [-9, -9, -9, -9]
+  const comp = { apex: DEFAULT_APEX, calm: 0, beamTop: -1, tApex: DEFAULT_APEX, tCalm: 0, flag: NO_FLAG.slice(), tFlag: NO_FLAG }
+  const readComposition = (snap) => {
+    const c = (compose && compose()) || {}
+    comp.tApex = Math.min(MAX_APEX, Math.max(MIN_APEX, c.horizon ?? DEFAULT_APEX))
+    comp.tCalm = c.calm ? 1 : 0
+    comp.beamTop = c.beamTop ?? -1
+    // flag rect arrives in document px → viewport-height units
+    const vh = Math.max(1, window.innerHeight)
+    const hadFlag = comp.tFlag !== NO_FLAG
+    comp.tFlag = c.flag ? c.flag.map((v) => v / vh) : NO_FLAG
+    if (snap || !hadFlag || comp.tFlag === NO_FLAG) comp.flag = comp.tFlag.slice()
+    if (snap) {
+      comp.apex = comp.tApex
+      comp.calm = comp.tCalm
+    }
+  }
+
+  const resize = () => {
+    const w = canvas.clientWidth || window.innerWidth
+    const h = canvas.clientHeight || window.innerHeight
+    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    let scale = dpr * quality
+    // keep the fragment workload bounded on very large displays
+    const pixels = w * h * scale * scale
+    if (pixels > MAX_PIXELS) scale *= Math.sqrt(MAX_PIXELS / pixels)
+    const cw = Math.max(1, Math.round(w * scale))
+    const ch = Math.max(1, Math.round(h * scale))
+    if (canvas.width !== cw || canvas.height !== ch) {
+      canvas.width = cw
+      canvas.height = ch
+    }
+    gl.viewport(0, 0, cw, ch)
+  }
+
+  const draw = () => {
+    const intro = reducedMotion
+      ? 1
+      : litAt === null
+        ? 0
+        : Math.min(1, (clock - litAt) / INTRO_SECONDS)
+    gl.uniform2f(u.uRes, canvas.width, canvas.height)
+    gl.uniform1f(u.uTime, reducedMotion ? STILL_TIME : clock)
+    gl.uniform1f(u.uIntro, intro)
+    gl.uniform1f(u.uScroll, (window.scrollY || 0) / Math.max(1, window.innerHeight))
+    gl.uniform2f(u.uPointer, pointer.x, pointer.y)
+    gl.uniform1f(u.uImpactX, impactX)
+    gl.uniform1f(u.uApex, comp.apex)
+    gl.uniform1f(u.uCalm, comp.calm)
+    const scrolled = (window.scrollY || 0) / Math.max(1, window.innerHeight)
+    gl.uniform1f(u.uBeamTop, comp.beamTop - scrolled)
+    gl.uniform4f(u.uFlag, comp.flag[0], comp.flag[1] - scrolled, comp.flag[2], comp.flag[3] - scrolled)
+    gl.drawArrays(gl.TRIANGLES, 0, 3)
+  }
+
+  const frame = (now) => {
+    if (!running) return
+    raf = requestAnimationFrame(frame)
+    const dt = last ? Math.min((now - last) / 1000, 0.1) : 0.016
+    last = now
+    clock += dt
+    // inertia: the camera eases toward the pointer instead of snapping
+    const k = 1 - Math.exp(-dt * 2.4)
+    pointer.x += (pointer.tx - pointer.x) * k
+    pointer.y += (pointer.ty - pointer.y) * k
+    frames += 1
+    // far below the hero the scene is dimmed backdrop: half the frame rate
+    const deep = (window.scrollY || 0) > window.innerHeight * 1.5
+    if (deep && frames % 2 === 1) return
+    if (frames % 24 === 0) readComposition(false)
+    const kc = 1 - Math.exp(-dt * 1.6)
+    comp.apex += (comp.tApex - comp.apex) * kc
+    comp.calm += (comp.tCalm - comp.calm) * kc
+    for (let i = 0; i < 4; i++) comp.flag[i] += (comp.tFlag[i] - comp.flag[i]) * kc
+    draw()
+
+    // adaptive resolution: sustained slow frames trade sharpness for smoothness
+    if (dt > 0.024) slowFrames += 1
+    if (frames >= 48) {
+      if (!deep && slowFrames > 28 && quality > MIN_QUALITY) {
+        quality = Math.max(MIN_QUALITY, quality * 0.8)
+        resize()
+        draw() // resizing clears the canvas — repaint before this frame is shown
+      }
+      frames = 0
+      slowFrames = 0
+    }
+  }
+
+  const start = () => {
+    if (destroyed || running || reducedMotion || document.hidden) return
+    running = true
+    last = 0
+    raf = requestAnimationFrame(frame)
+  }
+
+  const stop = () => {
+    running = false
+    cancelAnimationFrame(raf)
+  }
+
+  const onPointer = (e) => {
+    pointer.tx = (e.clientX / window.innerWidth) * 2 - 1
+    pointer.ty = (e.clientY / window.innerHeight) * 2 - 1
+  }
+  const onVisibility = () => (document.hidden ? stop() : start())
+  let resizeTimer = 0
+  const onResize = () => {
+    clearTimeout(resizeTimer)
+    resizeTimer = setTimeout(() => {
+      resize()
+      readComposition(!running)
+      draw() // resizing clears the canvas — never leave it blank until the next frame
+    }, 120)
+  }
+  const onScrollStill = () => draw()
+  const onLost = (e) => {
+    e.preventDefault()
+    stop()
+  }
+
+  window.addEventListener('resize', onResize)
+  canvas.addEventListener('webglcontextlost', onLost)
+  if (reducedMotion) {
+    // static scene: no loop, but exposure still follows the scroll position
+    window.addEventListener('scroll', onScrollStill, { passive: true })
+  } else {
+    document.addEventListener('visibilitychange', onVisibility)
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      window.addEventListener('pointermove', onPointer, { passive: true })
+    }
+  }
+
+  resize()
+  readComposition(true)
+  draw()
+  start()
+  // webfonts change the copy's box; the static frame recomposes once they land
+  if (reducedMotion && document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => {
+      if (destroyed) return
+      readComposition(true)
+      draw()
+    })
+  }
+
+  return {
+    /** ignite the strike (idempotent) — called once the page is revealed */
+    ignite() {
+      if (litAt === null) litAt = clock
+    },
+    destroy() {
+      destroyed = true
+      stop()
+      clearTimeout(resizeTimer)
+      window.removeEventListener('resize', onResize)
+      window.removeEventListener('scroll', onScrollStill)
+      window.removeEventListener('pointermove', onPointer)
+      document.removeEventListener('visibilitychange', onVisibility)
+      canvas.removeEventListener('webglcontextlost', onLost)
+    },
+  }
+}

@@ -1,0 +1,15 @@
+- 2026-11-13T06:38:29+07:00 created (feature, prd-lite, standard) -> REQUEST_CLASSIFIED
+- 2026-11-13T06:38:29+07:00 decision D-001 mode/PFR-008 execution mode: standard (accept) JEV-20261113-3d775974#mode
+- 2026-11-13T06:38:29+07:00 decision D-002 risk/PFR-008 overall risk: low (escalate) JEV-20261113-3d775974#risk
+- 2026-11-13T06:38:29+07:00 decision D-003 criticality/REQ-PFR-008-001: yes (escalate) JEV-20261113-3d775974#crit1
+- 2026-11-13T06:38:29+07:00 decision D-004 criticality/REQ-PFR-008-002: yes (escalate) JEV-20261113-3d775974#crit2
+- 2026-11-13T06:38:29+07:00 decision D-005 criticality/REQ-PFR-008-003: yes (escalate) JEV-20261113-3d775974#crit3
+- 2026-11-13T06:38:29+07:00 decision D-006 analysis/PFR-008 analysis sufficiency: not_enough (escalate) JEV-20261113-3d775974#analysis
+- 2026-11-13T06:38:32+07:00 REQUEST_CLASSIFIED -> IMPLEMENTATION: Remove modal
+- 2026-11-13T06:40:44+07:00 decision D-007 scope/PFR-008 final diff vs requirement: in_scope (accept) JEV-20261113-ca80195e#scope
+- 2026-11-13T06:40:45+07:00 decision D-008 evidence/AC-PFR-008-001: sufficient (escalate) JEV-20261113-ca80195e#e1
+- 2026-11-13T06:40:45+07:00 decision D-009 evidence/AC-PFR-008-002: sufficient (accept) JEV-20261113-ca80195e#e2
+- 2026-11-13T06:40:45+07:00 decision D-010 evidence/AC-PFR-008-003: sufficient (accept) JEV-20261113-ca80195e#e3
+- 2026-11-13T06:41:13+07:00 decision D-011 severity/Y1: appropriate (escalate) JEV-20261113-2810ab2d#y1
+- 2026-11-13T06:41:46+07:00 decision D-012 severity/Y2: appropriate (accept) JEV-20261113-67be21b7#y2
+- 2026-11-13T06:41:46+07:00 IMPLEMENTATION -> COMPLETED: Modal dihapus; kartu non-interaktif + desc + 16/9; test disesuaikan terdokumentasi

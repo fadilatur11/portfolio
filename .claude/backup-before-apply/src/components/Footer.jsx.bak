@@ -1,0 +1,19 @@
+import { motion } from 'framer-motion'
+import { site } from '../data/site.js'
+import { useReducedMotion } from '../hooks/useReducedMotion.js'
+import { revealProps } from '../lib/motion.js'
+
+export default function Footer() {
+  const reduced = useReducedMotion()
+
+  return (
+    <motion.footer
+      className="footer"
+      {...revealProps(reduced, { y: 22, duration: 0.6, margin: '-4% 0px' })}
+    >
+      <p className="footer-name">{site.name}</p>
+      <p className="footer-copy mono-meta">&copy; 2026</p>
+      <a className="footer-top mono-meta" href="#top">Back to top <span aria-hidden="true">&#8593;</span></a>
+    </motion.footer>
+  )
+}

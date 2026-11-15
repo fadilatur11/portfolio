@@ -1,0 +1,39 @@
+- 2026-11-12T22:34:32+07:00 created (feature, prd-lite, standard) -> REQUEST_CLASSIFIED
+- 2026-11-12T22:35:10+07:00 decision D-001 mode/PFR-001 execution mode: standard (accept) JEV-20261112-e71c17ad#mode
+- 2026-11-12T22:35:10+07:00 decision D-002 risk/PFR-001 overall risk: low (accept) JEV-20261112-e71c17ad#risk
+- 2026-11-12T22:43:25+07:00 REQUEST_CLASSIFIED -> REQUIREMENT_READY: gate READY_WITH_ASSUMPTIONS; asumsi REQ-005 akan dikonfirmasi ke user
+- 2026-11-12T22:43:30+07:00 REQUIREMENT_READY -> TECHNICAL_PLANNING: F0 creative direction berjalan; territory diputuskan user
+- 2026-11-12T22:54:26+07:00 decision D-003 analysis/PFR-001 analysis sufficiency: enough_for_planning (escalate) JEV-20261112-66ccd7ef#analysis_sufficient
+- 2026-11-12T22:54:26+07:00 decision D-004 criticality/REQ-PFR-001-001: no (accept) JEV-20261112-66ccd7ef#crit_1
+- 2026-11-12T22:54:27+07:00 decision D-005 criticality/REQ-PFR-001-002: no (accept) JEV-20261112-66ccd7ef#crit_2
+- 2026-11-12T22:54:27+07:00 decision D-006 criticality/REQ-PFR-001-003: no (escalate) JEV-20261112-66ccd7ef#crit_3
+- 2026-11-12T22:54:27+07:00 decision D-007 criticality/REQ-PFR-001-004: no (accept) JEV-20261112-66ccd7ef#crit_4
+- 2026-11-12T22:54:27+07:00 decision D-008 criticality/REQ-PFR-001-005: no (escalate) JEV-20261112-66ccd7ef#crit_5
+- 2026-11-12T22:54:27+07:00 decision D-009 criticality/REQ-PFR-001-006: no (escalate) JEV-20261112-66ccd7ef#crit_6
+- 2026-11-12T22:54:27+07:00 decision D-010 criticality/REQ-PFR-001-007: no (escalate) JEV-20261112-66ccd7ef#crit_7
+- 2026-11-12T22:54:27+07:00 decision D-011 criticality/REQ-PFR-001-008: no (escalate) JEV-20261112-66ccd7ef#crit_8
+- 2026-11-12T22:55:11+07:00 decision D-012 criticality/REQ-PFR-001-003: no (escalate) JEV-20261112-66ccd7ef#crit_3
+- 2026-11-12T22:56:42+07:00 decision D-013 criticality/REQ-PFR-001-003: no (accept) JEV-20261112-0d7d03e5#crit_3_fresh
+- 2026-11-12T22:57:57+07:00 TECHNICAL_PLANNING -> IMPLEMENTATION: F0 selesai; T1 terpilih; keputusan lengkap; analysis.md terisi; lint-sources bersih
+- 2026-11-12T23:35:54+07:00 decision D-014 scope/PFR-001 final diff vs requirement: in_scope (accept) JEV-20261112-b7837a8d#scope
+- 2026-11-12T23:35:54+07:00 decision D-015 evidence/AC-PFR-001-001: sufficient (escalate) JEV-20261112-b7837a8d#ev1
+- 2026-11-12T23:35:54+07:00 decision D-016 evidence/AC-PFR-001-002: insufficient (escalate) JEV-20261112-b7837a8d#ev2
+- 2026-11-12T23:35:54+07:00 decision D-017 evidence/AC-PFR-001-003: insufficient (escalate) JEV-20261112-b7837a8d#ev3
+- 2026-11-12T23:35:54+07:00 decision D-018 evidence/AC-PFR-001-004: sufficient (escalate) JEV-20261112-b7837a8d#ev4
+- 2026-11-12T23:35:55+07:00 decision D-019 evidence/AC-PFR-001-005: insufficient (escalate) JEV-20261112-b7837a8d#ev5
+- 2026-11-12T23:35:55+07:00 decision D-020 evidence/AC-PFR-001-006: insufficient (accept) JEV-20261112-b7837a8d#ev6
+- 2026-11-12T23:35:55+07:00 decision D-021 evidence/AC-PFR-001-007: sufficient (escalate) JEV-20261112-b7837a8d#ev7
+- 2026-11-12T23:35:55+07:00 decision D-022 evidence/AC-PFR-001-008: sufficient (escalate) JEV-20261112-b7837a8d#ev8
+- 2026-11-12T23:35:55+07:00 decision D-023 severity/Review findings R1-R8: not_appropriate (escalate) JEV-20261112-b7837a8d#sev_findings
+- 2026-11-12T23:37:48+07:00 decision D-024 severity/R1: appropriate (escalate) JEV-20261112-3b20a80c#r1
+- 2026-11-12T23:37:48+07:00 decision D-025 severity/R2: appropriate (escalate) JEV-20261112-3b20a80c#r2
+- 2026-11-12T23:37:48+07:00 decision D-026 severity/R3: appropriate (escalate) JEV-20261112-3b20a80c#r3
+- 2026-11-12T23:37:48+07:00 decision D-027 severity/R4: appropriate (escalate) JEV-20261112-3b20a80c#r4
+- 2026-11-12T23:37:48+07:00 decision D-028 severity/R5: appropriate (accept) JEV-20261112-3b20a80c#r5
+- 2026-11-12T23:37:49+07:00 decision D-029 severity/R6: appropriate (escalate) JEV-20261112-3b20a80c#r6
+- 2026-11-12T23:37:49+07:00 decision D-030 severity/R7: appropriate (escalate) JEV-20261112-3b20a80c#r7
+- 2026-11-12T23:37:49+07:00 decision D-031 severity/R8: appropriate (escalate) JEV-20261112-3b20a80c#r8
+- 2026-11-12T23:38:49+07:00 IMPLEMENTATION -> INDEPENDENT_REVIEW: Review gate F4 selesai: .ui-craft/review-gate.md verdict PASS (0 critical/major open)
+- 2026-11-12T23:38:49+07:00 INDEPENDENT_REVIEW -> DOCUMENTATION_UPDATE: Docs: design-system.md, .ui-craft/* artifacts, verification.md lengkap
+- 2026-11-12T23:38:49+07:00 DOCUMENTATION_UPDATE -> FINAL_VALIDATION: verify=VERIFIED; trace check
+- 2026-11-12T23:38:49+07:00 FINAL_VALIDATION -> COMPLETED: Semua gate lolos: build exit 0, 9/9 test, QA browser desktop+mobile bersih

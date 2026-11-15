@@ -1,0 +1,62 @@
+import { useEffect, useRef } from 'react'
+import { drawPlanetScene } from '../lib/planetCanvas.js'
+
+/**
+ * BackgroundSpace — "meteor strike" backdrop, realistic pass (PFR-010h):
+ * the planet band is drawn ONCE on a <canvas> by lib/planetCanvas.js —
+ * procedural FBM landmasses, cloud wisps, city-light clusters correlated to
+ * the landmass, multi-band atmosphere scattering along the arc, the beam's
+ * light-pool on the surface and a photographic vignette. The CSS layers on
+ * top carry the light: volumetric shaft, beam, travelling pulse, impact
+ * bloom, horizon splash, one periodic meteor streak.
+ *
+ * Redraw: once on mount + debounced on resize (never per-frame). jsdom guard:
+ * getContext returns null → skip silently. Discipline unchanged: aria-hidden,
+ * loops pause via .tab-hidden, reduced-motion = static scene.
+ */
+export default function BackgroundSpace() {
+  const canvasRef = useRef(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return undefined
+    // the backdrop is decoration — a failure here must NEVER take the page
+    // down; the message lands on <html data-bg-error> for diagnostics
+    const render = () => {
+      try {
+        drawPlanetScene(canvas, { impactX: 0.5 })
+        delete document.documentElement.dataset.bgError
+      } catch (err) {
+        document.documentElement.dataset.bgError = String(err?.message || err).slice(0, 300)
+      }
+    }
+    render()
+    let t = 0
+    const onResize = () => {
+      clearTimeout(t)
+      t = setTimeout(render, 180)
+    }
+    window.addEventListener('resize', onResize)
+    return () => {
+      window.removeEventListener('resize', onResize)
+      clearTimeout(t)
+    }
+  }, [])
+
+  return (
+    <div className="bg-space" aria-hidden="true">
+      <div className="stars" />
+      <canvas className="planet-canvas" ref={canvasRef} />
+      <span className="meteor" />
+      <div className="meteor-strike">
+        <div className="shaft" />
+        <div className="horizon-splash" />
+        <div className="beam-glow" />
+        <div className="beam-core" />
+        <span className="beam-flow" />
+        <div className="impact" />
+        <div className="impact-core" />
+      </div>
+    </div>
+  )
+}
